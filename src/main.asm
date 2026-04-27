@@ -1,6 +1,8 @@
 !DECLARE KeyboardDevice = 0x01
 !DECLARE JoystickDevice = 0x02
 
+!IMPORT "Drivers/KeyboardDriver.asm" AS KeyboardDriver
+
 .Kernel
 
 ; Initialize stack pointer
@@ -26,22 +28,9 @@ JPZ HandleKeyboardInterrupt ; go to the keyboard driver
 JP CheckJoystickInterrupt   ; check for the joystick if it wasn't the keyboard
 
 HandleKeyboardInterrupt:
-    PUSH REX
-    PUSH REB
-    PUSH REZ
-
-    LDI REX, $MemDevice1.Start  ; load address of device 1
-    LDI REB, [REX]              ; read value from device 1
-
-    ; 0x100001 = ClearScreen
-    ; 0x100002 = WriteCharacter
-    LDI REZ, #0x100002  ; load memory addresses into registers first. STR [#0x100002], <VALUE> does not currently work for some reason.
-    STR REZ, REB        ; send "Write Character" signal to TTY-Terminal
-
-    POP REZ
-    POP REB
-    POP REX
-    JP InterruptDone 
+    LDI REA, #0x01        ; Read and draw mode
+    CALL KeyboardDriver.Handle
+    JP InterruptDone
 
 CheckJoystickInterrupt: ; Check if the interrupt is from the joystick
 LDI REB, JoystickDevice
@@ -56,6 +45,4 @@ InterruptDone:
 POP REB
 POP REA
 RTI
-
-
 
