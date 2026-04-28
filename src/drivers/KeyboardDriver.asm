@@ -11,26 +11,16 @@ Handle:
 
     ; Check for Read-Write mode
     LDI REB, #0x01
-    SUB REB, REA, REZ
-    JPZ HandleReadAndDraw
-    JP HandleRead
-
-    ; Perform Read-Write mode
-    HandleReadAndDraw:
-        CALL ReadAndDraw
-        JP HandleDone
+    CMP REB, REA
+    CALL_EQ ReadAndDraw
+    JP_EQ HandleDone
 
     ; Check for Read mode
-    HandleRead:
-    ADD REB, REB
-    SUB REB, REA, REZ
-    JPZ HandleRead
-    JP HandleDone
+    LDI REB, #0x02
+    CMP REB, REA
+    CALL_EQ Read
+    JP_EQ HandleDone
 
-    ; Perform Read mode
-    HandleRead:
-        CALL Read
-        
     ; finish/ mode not found
     HandleDone:
 
@@ -40,12 +30,15 @@ Handle:
 ReadAndDraw:
     PUSH REX
     PUSH REZ
+    PUSH REA
 
     LDI REX, $MemDevice1.Start  ; load address of device 1
     LDI REB, [REX]              ; read value from device 1
+    MOV REA, REB 
 
     CALL TTYDriver.WriteCharacter
     
+    POP REA
     POP REZ
     POP REX
     RTS 

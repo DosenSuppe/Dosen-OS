@@ -23,8 +23,8 @@ GET_INT_ID REA
 
 ; Check if the interrupt is from the keyboard
 LDI REB, KeyboardDevice
-SUB REB, REA
-JPZ HandleKeyboardInterrupt ; go to the keyboard driver
+CMP REA, REB
+JP_EQ HandleKeyboardInterrupt ; go to the keyboard driver
 JP CheckJoystickInterrupt   ; check for the joystick if it wasn't the keyboard
 
 HandleKeyboardInterrupt:
@@ -34,8 +34,8 @@ HandleKeyboardInterrupt:
 
 CheckJoystickInterrupt: ; Check if the interrupt is from the joystick
 LDI REB, JoystickDevice
-SUB REB, REA
-JPZ HandleJoystickInterrupt ; go to the joystick driver
+CMP REA, REB
+JP_EQ HandleJoystickInterrupt ; go to the joystick driver
 JP InterruptDone            ; interrupt could not be handled, so just return
 
 HandleJoystickInterrupt:
