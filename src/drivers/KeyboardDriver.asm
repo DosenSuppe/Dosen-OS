@@ -2,10 +2,11 @@
 
 .KeyboardDriver
 
+; Read-Draw mode: REA = 0x01, REB = value read from keyboard buffer
+; Read mode: REA = 0x02, REB = value read from keyboard buffer
 @REA Driver-Action mode
 @REB set to key-value when using read mode
 Handle:
-    PUSH REB
     PUSH REZ
 
     ; Check for Read-Write mode
@@ -34,21 +35,18 @@ Handle:
     HandleDone:
 
     POP REZ
-    POP REB
     RTS
 
 ReadAndDraw:
     PUSH REX
-    PUSH REA
     PUSH REZ
 
     LDI REX, $MemDevice1.Start  ; load address of device 1
-    LDI REA, [REX]              ; read value from device 1
+    LDI REB, [REX]              ; read value from device 1
 
     CALL TTYDriver.WriteCharacter
     
     POP REZ
-    POP REA
     POP REX
     RTS 
 
