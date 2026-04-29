@@ -12,20 +12,20 @@ Handle:
     ; Check for Read-Write mode
     LDI REB, #0x01
     CMP REB, REA
+    JP_NEQ CheckReadMode
     CALL_EQ ReadAndDraw
-    JP_EQ HandleDone
+    JP HandleDone
 
     ; Check for Read mode
-    LDI REB, #0x02
-    CMP REB, REA
-    CALL_EQ Read
-    JP_EQ HandleDone
+    CheckReadMode:
+        LDI REB, #0x02
+        CMP REB, REA
+        CALL_EQ Read
 
     ; finish/ mode not found
     HandleDone:
-
-    POP REZ
-    RTS
+        POP REZ
+        RTS
 
 ReadAndDraw:
     PUSH REX

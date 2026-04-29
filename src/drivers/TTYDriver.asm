@@ -12,3 +12,12 @@ WriteCharacter:
     
     POP REZ
     RTS
+
+ClearScreen:
+    PUSH REZ
+
+    LDI REZ, #0x100001
+    STR REZ, REZ
+
+    POP REZ
+    RTS
