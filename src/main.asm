@@ -22,8 +22,6 @@ Prog:
 PUSH REA
 PUSH REB
 
-CALL TTYDriver.ClearScreen
-
 GET_INT_ID REA
 
 ; Check if the interrupt is from the keyboard
@@ -36,13 +34,52 @@ HandleKeyboardInterrupt:
     ; read character to screen
     CALL KeyboardDriver.Read
 
+    ; write character to TTY
+    MOV REA, REB
+    CALL TTYDriver.WriteCharacter
+
     ; check for new-line (execute command)
     LDI REC, Characters.NewLine
-    CMP REC, REA 
+    CMP REC, REB
     CALL_EQ TriggerExecute
+    JP_EQ InterruptDone
 
-    ; write character to TTY
-    CALL TTYDriver.WriteCharacter
+    ; store character to RAM-Buffer
+    PUSH REZ
+    PUSH REY
+    PUSH REX
+    PUSH REW
+
+    ; get current size of stored characters
+    LDI REZ, $CommandCharacterBuffer.Start
+    LDI REY, [REZ]
+
+    ; increase size of stored characters
+    LDI REX, #1
+
+    LDI REW, Characters.Backspace
+    CMP REA, REW
+    JP_EQ DecreaseBufferSize
+
+    ADD REY, REX
+    STR REZ, REY        ; store new size of buffered characters
+    JP StoreChar
+
+    DecreaseBufferSize:
+    SUB REY, REX
+    STR REZ, REY        ; store new size of buffered characters
+    JP UpdateCommandBufferDone
+
+    StoreChar:
+    ADD REY, REZ, REW   ; get index to store new character to (store in REW)
+    STR REW, REA        ; store character to new index
+
+    UpdateCommandBufferDone:
+
+    POP REW
+    POP REX
+    POP REY
+    POP REZ
 
     JP InterruptDone
 
