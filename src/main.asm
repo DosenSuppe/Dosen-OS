@@ -1,9 +1,9 @@
-!DECLARE KeyboardDevice = 0x01
-!DECLARE JoystickDevice = 0x02
-
 !IMPORT "Drivers/KeyboardDriver.asm" AS KeyboardDriver
 !IMPORT "Drivers/TTYDriver.asm" AS TTYDriver
 !IMPORT "Mappings/Characters.asm" AS Characters
+!IMPORT "Shell/Shell.asm" AS Shell
+
+!DECLARE KeyboardDevice = 0x01
 
 .Kernel
 
@@ -13,9 +13,9 @@ SET_SP $Stack.Start
 ; Initialize interrupt vector
 SET_IVR $InterruptVector.Start
 
+CALL Shell.Initialize
 Prog:
-    LDI REA, Characters.Char_Equal
-    CALL TTYDriver.WriteCharacter
+    NOP
     JP Prog
 
 .InterruptVector
@@ -29,22 +29,27 @@ GET_INT_ID REA
 ; Check if the interrupt is from the keyboard
 LDI REB, KeyboardDevice
 CMP REA, REB
-JP_NEQ CheckJoystickInterrupt ; check for the joystick if it wasn't the keyboard
 JP_EQ HandleKeyboardInterrupt ; go to the keyboard driver
+JP InterruptDone
 
 HandleKeyboardInterrupt:
-    LDI REA, #0x01        ; Read and draw mode
-    CALL KeyboardDriver.Handle
+    ; read character to screen
+    CALL KeyboardDriver.Read
+
+    ; check for new-line (execute command)
+    LDI REC, Characters.NewLine
+    CMP REC, REA 
+    CALL_EQ TriggerExecute
+
+    ; write character to TTY
+    CALL TTYDriver.WriteCharacter
+
     JP InterruptDone
 
-CheckJoystickInterrupt: ; Check if the interrupt is from the joystick
-    LDI REB, JoystickDevice
-    CMP REA, REB
-    JP_NEQ InterruptDone            ; interrupt could not be handled, so just return
-    JP_EQ HandleJoystickInterrupt   ; go to the joystick driver
-
-HandleJoystickInterrupt:
-    NOP ; TODO
+TriggerExecute:
+    CALL Shell.Execute
+    CALL Shell.Initialize
+    RTS
 
 InterruptDone:
     POP REB
