@@ -21,6 +21,7 @@ Prog:
 .InterruptVector
 PUSH REA
 PUSH REB
+PUSH REC
 
 GET_INT_ID REA
 
@@ -41,8 +42,7 @@ HandleKeyboardInterrupt:
     ; check for new-line (execute command)
     LDI REC, Characters.NewLine
     CMP REC, REB
-    CALL_EQ TriggerExecute
-    JP_EQ InterruptDone
+    JP_EQ TriggerExecute
 
     ; store character to RAM-Buffer
     PUSH REZ
@@ -86,9 +86,10 @@ HandleKeyboardInterrupt:
 TriggerExecute:
     CALL Shell.Execute
     CALL Shell.Initialize
-    RTS
+    JP InterruptDone
 
 InterruptDone:
+    POP REC
     POP REB
     POP REA
     RTI
