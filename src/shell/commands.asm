@@ -30,7 +30,7 @@ CMD_EDF: ; Edit File
     ;       File Not Found
     RTS
 
-CMD_DTF: ; Delete File
+CMD_DEL: ; Delete(/ or directory once they are supported) File
     ; TODO: catch filename from second parameter
     ; TODO: check if filename is on filename-page
     ; TODO: delete filesize at fileaddress

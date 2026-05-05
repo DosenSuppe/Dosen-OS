@@ -63,7 +63,7 @@ Execute:
     JP_EQ Group3
     LDI REA, #4
     CMP REN, REA
-    JP_EQ Group4                        ; add when a 4-char command exists
+    JP_EQ Group4                        
     JP Execute_Done                     ; no bucket matched -> command not found
 
 ; -------- length 3 commands --------
@@ -73,98 +73,38 @@ Group3:
     LDI REB, [REC]
     LDI REA, Characters.c
     CMP REA, REB
-    JP_NEQ Try_crf
+    JP_NEQ Try_del
     ADD REC, REP
     LDI REB, [REC]
     LDI REA, Characters.l
     CMP REA, REB
-    JP_NEQ Try_crf
+    JP_NEQ Try_del
     ADD REC, REP
     LDI REB, [REC]
     LDI REA, Characters.s
     CMP REA, REB
-    JP_NEQ Try_crf
+    JP_NEQ Try_del
     CALL commands.CMD_CLS
     JP Execute_Done
 
-Try_crf:
-    ; "crf" -- create file
+Try_del:
+    ; "del" -- delete fil(/ directory once directories are supported)
     MOV REC, REO
     LDI REB, [REC]
-    LDI REA, Characters.c
+    LDI REA, Characters.d
     CMP REA, REB
-    JP_NEQ Try_edf
+    JP_NEQ Execute_Done
     ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.r
-    CMP REA, REB
-    JP_NEQ Try_edf
-    ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.f
-    CMP REA, REB
-    JP_NEQ Try_edf
-    CALL commands.CMD_CRF
-    JP Execute_Done
-
-Try_edf:
-    ; "edf" -- edit file
-    MOV REC, REO
     LDI REB, [REC]
     LDI REA, Characters.e
     CMP REA, REB
-    JP_NEQ Try_dtf
+    JP_NEQ Execute_Done
     ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.d
-    CMP REA, REB
-    JP_NEQ Try_dtf
-    ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.f
-    CMP REA, REB
-    JP_NEQ Try_dtf
-    CALL commands.CMD_EDF
-    JP Execute_Done
-
-Try_dtf:
-    ; "dtf" -- delete file
-    MOV REC, REO
-    LDI REB, [REC]
-    LDI REA, Characters.d
-    CMP REA, REB
-    JP_NEQ Try_lsf
-    ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.t
-    CMP REA, REB
-    JP_NEQ Try_lsf
-    ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.f
-    CMP REA, REB
-    JP_NEQ Try_lsf
-    CALL commands.CMD_DTF
-    JP Execute_Done
-
-Try_lsf:
-    ; "lsf" -- list files
-    MOV REC, REO
     LDI REB, [REC]
     LDI REA, Characters.l
     CMP REA, REB
     JP_NEQ Execute_Done
-    ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.s
-    CMP REA, REB
-    JP_NEQ Execute_Done
-    ADD REC, REP
-    LDI REB, [REC]
-    LDI REA, Characters.f
-    CMP REA, REB
-    JP_NEQ Execute_Done
-    CALL commands.CMD_LSF
+    CALL commands.CMD_DEL
     JP Execute_Done
 
 ; -------- length 4 commands --------
@@ -191,6 +131,11 @@ Group4:
     CMP REA, REB
     JP_NEQ Execute_Done
     CALL commands.CMD_HALT
+    JP Execute_Done
+
+; -------- length 6 commands --------
+Group6:
+    ; dofile
     JP Execute_Done
 
 Execute_Done:
