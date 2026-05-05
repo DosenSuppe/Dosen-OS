@@ -22,68 +22,182 @@ Initialize:
 
     POP REC
     POP REB
-    POP REA 
+    POP REA
     RTS
 
+; Dispatch the command currently in CommandCharacterBuffer.
+; Buffer layout: word[0] = length, word[1..length] = chars (one per word).
+;
+; Strategy: length-bucketed linear search.
+;   1. Branch on input length to a group containing only same-length commands.
+;   2. Within a group, compare chars left-to-right; first mismatch jumps to
+;      the next candidate so most rejections cost ~4 instructions.
+; Register usage inside Execute:
+;   REN = input length     REO = pointer to first input char (buffer + 1)
+;   REP = constant 1 (offset increment)
+;   REC = walking pointer into the input
+;   REA = expected char    REB = actual char loaded from buffer
 Execute:
     PUSH REA
     PUSH REB
-
-    CALL PackChars
-
-    LDI REB, #0x636C73
-    CMP REA, REB
-    CALL_EQ commands.CMD_CLS
-    JP_EQ ExecuteDone
-
-    ExecuteDone:
-    POP REB
-    POP REA  
-    RTS
-
-; packs up to 3 characters into one register
-; value returned in REA
-PackChars:
-    PUSH REB
-    PUSH RES
     PUSH REC
     PUSH REN
+    PUSH REO
     PUSH REP
-    PUSH REZ
-    PUSH REU
 
-    LDI REB, $CommandCharacterBuffer.Start   ; base
-    LDI REC, #3
-    LDI REU, [REB]
-
-    CMP REU, REC
-    JP_NEQ packingDone ; check that the command has the correct length
-
-    LDI REA, #0
-    LDI RES, #8
-    LDI REN, #0
     LDI REP, #1
 
-    pack:
-        ADD REN, REP       ; advance offset (starts at 1, skipping length byte)
+    LDI REA, $CommandCharacterBuffer.Start
+    LDI REN, [REA]                      ; REN = input length
 
-        MOV REZ, REB       ; REZ = base
-        ADD REZ, REN       ; REZ = base + offset (fresh each iteration)
-        LDI REZ, [REZ]     ; load buf[offset]
+    LDI REB, #0
+    CMP REN, REB
+    JP_EQ Execute_Done                  ; empty line, nothing to do
 
-        SHL REA, RES
-        ADD REA, REZ
+    MOV REO, REA
+    ADD REO, REP                        ; REO = first char of input
 
-        CMP REN, REC
-        JP_LT pack
+    ; --- length bucket dispatch ---
+    LDI REA, #3
+    CMP REN, REA
+    JP_EQ Group3
+    LDI REA, #4
+    CMP REN, REA
+    JP_EQ Group4                        ; add when a 4-char command exists
+    JP Execute_Done                     ; no bucket matched -> command not found
 
-    packingDone:
-    POP REU
-    POP REZ
+; -------- length 3 commands --------
+Group3:
+    ; "cls"
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.c
+    CMP REA, REB
+    JP_NEQ Try_crf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.l
+    CMP REA, REB
+    JP_NEQ Try_crf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.s
+    CMP REA, REB
+    JP_NEQ Try_crf
+    CALL commands.CMD_CLS
+    JP Execute_Done
+
+Try_crf:
+    ; "crf" -- create file
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.c
+    CMP REA, REB
+    JP_NEQ Try_edf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.r
+    CMP REA, REB
+    JP_NEQ Try_edf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.f
+    CMP REA, REB
+    JP_NEQ Try_edf
+    CALL commands.CMD_CRF
+    JP Execute_Done
+
+Try_edf:
+    ; "edf" -- edit file
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.e
+    CMP REA, REB
+    JP_NEQ Try_dtf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.d
+    CMP REA, REB
+    JP_NEQ Try_dtf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.f
+    CMP REA, REB
+    JP_NEQ Try_dtf
+    CALL commands.CMD_EDF
+    JP Execute_Done
+
+Try_dtf:
+    ; "dtf" -- delete file
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.d
+    CMP REA, REB
+    JP_NEQ Try_lsf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.t
+    CMP REA, REB
+    JP_NEQ Try_lsf
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.f
+    CMP REA, REB
+    JP_NEQ Try_lsf
+    CALL commands.CMD_DTF
+    JP Execute_Done
+
+Try_lsf:
+    ; "lsf" -- list files
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.l
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.s
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.f
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    CALL commands.CMD_LSF
+    JP Execute_Done
+
+; -------- length 4 commands --------
+Group4:
+    ; "halt" -- halt the CPU
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.h
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.a
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.l
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.t
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    CALL commands.CMD_HALT
+    JP Execute_Done
+
+Execute_Done:
     POP REP
+    POP REO
     POP REN
     POP REC
-    POP RES
     POP REB
+    POP REA
     RTS
-

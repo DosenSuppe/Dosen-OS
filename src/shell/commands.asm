@@ -5,6 +5,9 @@ CMD_CLS:
     CALL TTYDriver.ClearScreen
     RTS
 
+CMD_HALT:
+    HALT
+
 CMD_CRF: ; Create File
     ; TODO: check for avail. space for new file
     ; TODO: catch filename from second parameter
