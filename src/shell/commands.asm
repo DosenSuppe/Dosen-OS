@@ -1,4 +1,7 @@
 !IMPORT "../drivers/TTYDriver.asm" AS TTYDriver
+!IMPORT "../mappings/Characters.asm" AS Characters
+!IMPORT "../utils/String.asm" AS String
+
 .Commands
 
 CMD_CLS:
@@ -8,7 +11,8 @@ CMD_CLS:
 CMD_HALT:
     HALT
 
-CMD_CRF: ; Create File
+CMD_DOFILE: ; Create File
+    
     ; TODO: check for avail. space for new file
     ; TODO: catch filename from second parameter
     ; TODO: save to filename-page for later index-ability
@@ -17,7 +21,7 @@ CMD_CRF: ; Create File
     ;       Missing File-Space. File not Created!
     RTS
 
-CMD_EDF: ; Edit File
+CMD_TOUCH: ; Edit File
     ; TODO: catch filename from second parameter
     ; TODO: check if filename is on filename-page
     ; TODO: open the file, read only mode at first
@@ -40,7 +44,22 @@ CMD_DEL: ; Delete(/ or directory once they are supported) File
     ;       File Not Found
     RTS
 
-CMD_LSF: ; List all file-names
+CMD_LS: ; List all files(/ directories once implemented)
+    PUSH REA 
+
+    LDI REA, Characters._1
+    CALL TTYDriver.WriteCharacter
+
+    LDI REA, Characters.Colon
+    CALL TTYDriver.WriteCharacter
+
+    LDI REA, #0x004300
+    CALL String.PrintString
+
+    LDI REA, Characters.NewLine
+    CALL TTYDriver.WriteCharacter
+
+    POP REA 
     ; TODO: load all names from filename-page
     ; TODO: display filename-page entries
     RTS

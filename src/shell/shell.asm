@@ -58,13 +58,37 @@ Execute:
     ADD REO, REP                        ; REO = first char of input
 
     ; --- length bucket dispatch ---
+    LDI REA, #2
+    CMP REN, REA
+    JP_EQ Group2
     LDI REA, #3
     CMP REN, REA
     JP_EQ Group3
     LDI REA, #4
     CMP REN, REA
-    JP_EQ Group4                        
+    JP_EQ Group4
+    LDI REA, #5
+    CMP REN, REA
+    JP_EQ Group5
+    LDI REA, #6
+    CMP REN, REA
+    JP_EQ Group6                        
     JP Execute_Done                     ; no bucket matched -> command not found
+
+Group2:
+    ; "ls"
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.l
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.s
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    CALL commands.CMD_LS
+    JP Execute_Done
 
 ; -------- length 3 commands --------
 Group3:
@@ -133,9 +157,70 @@ Group4:
     CALL commands.CMD_HALT
     JP Execute_Done
 
+; -------- length 5 commands --------
+Group5:
+    ; touch (open a file)
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.t
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.o
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.u
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.c
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.h
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    CALL commands.CMD_TOUCH
+    JP Execute_Done
+
 ; -------- length 6 commands --------
 Group6:
-    ; dofile
+    MOV REC, REO
+    LDI REB, [REC]
+    LDI REA, Characters.d
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.o
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.f
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.i
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.l
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    ADD REC, REP
+    LDI REB, [REC]
+    LDI REA, Characters.e
+    CMP REA, REB
+    JP_NEQ Execute_Done
+    CALL commands.CMD_DOFILE
     JP Execute_Done
 
 Execute_Done:
@@ -146,3 +231,4 @@ Execute_Done:
     POP REB
     POP REA
     RTS
+
