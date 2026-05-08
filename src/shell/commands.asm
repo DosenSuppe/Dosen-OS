@@ -12,7 +12,6 @@ CMD_HALT:
     HALT
 
 CMD_DOFILE: ; Create File
-    
     ; TODO: check for avail. space for new file
     ; TODO: catch filename from second parameter
     ; TODO: save to filename-page for later index-ability
@@ -46,21 +45,89 @@ CMD_DEL: ; Delete(/ or directory once they are supported) File
 
 CMD_LS: ; List all files(/ directories once implemented)
     PUSH REA 
+    PUSH REB
+    PUSH REC
+    PUSH REN 
+    PUSH REP
 
-    LDI REA, Characters._1
-    CALL TTYDriver.WriteCharacter
+    CALL CMD_LS_PrintHeader
 
-    LDI REA, Characters.Colon
-    CALL TTYDriver.WriteCharacter
+    LDI REC, #0x004601  ; max filename address
+    LDI REA, #0x004300  ; starting index
+    LDI REN, #0x000100  ; increments
+    LDI REB, #0x0       ; for empty check
 
-    LDI REA, #0x004300
-    CALL String.PrintString
+    LDI REX, Characters._1
+    LDI REY, #0x1
+    
+    CMD_LS_Loop:
+    LDI REP, [REA]      ; load size for filename string
+    CMP REP, REB        ; check if size is 0
+    CALL_NEQ CMD_LS_PrintPos
+
+    ADD REX, REY        ; increment index
+    ADD REA, REN        ; increment to next address
+    CMP REA, REC        ; compare for max address
+    JP_LT CMD_LS_Loop  ; loop when not equal
 
     LDI REA, Characters.NewLine
     CALL TTYDriver.WriteCharacter
 
+    POP REP
+    POP REN
+    POP REC
+    POP REB
     POP REA 
-    ; TODO: load all names from filename-page
-    ; TODO: display filename-page entries
     RTS
+
+    CMD_LS_PrintHeader:
+        PUSH REA
+        LDI REA, Characters.F
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.i
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.l
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.e
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.s
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.Colon
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.NewLine
+        CALL TTYDriver.WriteCharacter
+
+        POP REA
+        RTS
+
+    CMD_LS_PrintPos:
+        PUSH REA
+        
+        MOV REA, REX
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.Colon 
+        CALL TTYDriver.WriteCharacter
+
+        LDI REA, Characters.Space 
+        CALL TTYDriver.WriteCharacter
+
+        POP REA
+
+        CALL String.PrintString
+
+        PUSH REA
+
+        LDI REA, Characters.NewLine
+        CALL TTYDriver.WriteCharacter
+
+        POP REA
+        
+        RTS
 
