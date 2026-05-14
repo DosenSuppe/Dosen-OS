@@ -37,7 +37,7 @@ CopyStringBufferToAddress:
     PUSH REN
     PUSH REZ
 
-    LDI REZ, CommandCharacterBuffer.Start
+    LDI REZ, $CommandCharacterBuffer.Start
     LDI REB, [REZ]      ; get length of the string
     STR REA, REB        ; store the length of the string
 

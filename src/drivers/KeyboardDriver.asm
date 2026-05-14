@@ -32,7 +32,7 @@ ReadAndDraw:
     PUSH REZ
     PUSH REA
 
-    LDI REX, $MemDevice1.Start  ; load address of device 1
+    LDI REX, $MemDevice0.Start  ; load address of device 1
     LDI REB, [REX]              ; read value from device 1
     MOV REA, REB 
 
@@ -47,7 +47,7 @@ ReadAndDraw:
 Read:
     PUSH REX
 
-    LDI REX, $MemDevice1.Start  ; load address of device 1
+    LDI REX, $MemDevice0.Start  ; load address of device 1
     LDI REB, [REX]              ; read value from device 1
 
     POP REX
