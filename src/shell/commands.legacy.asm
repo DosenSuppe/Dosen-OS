@@ -11,6 +11,13 @@ CMD_CLS:
 CMD_HALT:
     HALT
 
+CMD_RUN:
+    RTS
+
+CMD_HELP:
+    ; TODO: List all available commands
+    RTS
+
 CMD_DOFILE: ; Create File
     ; TODO: check for avail. space for new file
     ; TODO: catch filename from second parameter

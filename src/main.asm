@@ -1,7 +1,9 @@
 !IMPORT "Drivers/KeyboardDriver.asm" AS KeyboardDriver
 !IMPORT "Drivers/TTYDriver.asm" AS TTYDriver
 !IMPORT "Mappings/Characters.asm" AS Characters
-!IMPORT "Shell/Shell.asm" AS Shell
+!IMPORT "Shell/shell.asm" AS Shell
+!IMPORT "Shell/os_bridge.asm" AS OsBridge
+!IMPORT "Drivers/ScreenDriver.asm" AS ScreenDriver
 
 !DECLARE KeyboardDevice = 0x01
 
@@ -13,7 +15,9 @@ SET_SP $Stack.Start
 ; Initialize interrupt vector
 SET_IVR $InterruptVector.Start
 
-CALL Shell.Initialize
+CALL shell_initialize
+CALL ScreenDriver.DrawCenterRedLine
+
 Prog:
     NOP
     JP Prog
@@ -35,6 +39,19 @@ HandleKeyboardInterrupt:
     ; read character to screen
     CALL KeyboardDriver.Read
 
+    ; checking for BackSpace that could eat the prompt "> "
+    LDI REA, Characters.Backspace
+    CMP REB, REA
+    JP_NEQ EchoToTTY    ; No backsapce -> write to TTY
+
+    LDI REA, $CommandCharacterBuffer.Start
+    LDI REC, [REA]
+    LDI REA, #0
+    CMP REC, REA
+    JP_EQ InterruptDone ; If buffer is empty (no char entered already) -> cancel input to not eat into prompt
+                        ; Else fall into EchoToTTY to write backspace
+
+EchoToTTY:
     ; write character to TTY
     MOV REA, REB
     CALL TTYDriver.WriteCharacter
@@ -84,11 +101,11 @@ HandleKeyboardInterrupt:
     JP InterruptDone
 
 TriggerExecute:
-    CALL Shell.Execute
-    CALL Shell.Initialize
-    JP InterruptDone
+    CALL shell_execute
+    CALL shell_initialize
+    
+    InterruptDone:
 
-InterruptDone:
     POP REC
     POP REB
     POP REA
