@@ -1,6 +1,6 @@
 .ScreenDriver
 
-!DECLARE FB_BASE   = 0x300000
+!DECLARE FB_BASE   = 0xA00000
 !DECLARE FB_WIDTH  = 320        ; pixels per row
 !DECLARE RED       = 0xFF0000
 
@@ -15,7 +15,7 @@
 ;         = 0x307BC0
 ;
 ;   count = 3 * FB_WIDTH = 960 = 0x3C0
-!DECLARE LINE_START = 0x307BC0
+!DECLARE LINE_START = 0xA07BC0
 !DECLARE LINE_PIXELS = 0x0003C0
 
 

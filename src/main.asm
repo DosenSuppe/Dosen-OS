@@ -2,6 +2,8 @@
 !IMPORT "Drivers/TTYDriver.asm" AS TTYDriver
 !IMPORT "Mappings/Characters.asm" AS Characters
 !IMPORT "Shell/shell.asm" AS Shell
+!IMPORT "Shell/shell_util.asm" AS ShellUtil
+!IMPORT "Shell/commands/ls.asm" AS LsCmd
 !IMPORT "Shell/os_bridge.asm" AS OsBridge
 !IMPORT "Drivers/ScreenDriver.asm" AS ScreenDriver
 
