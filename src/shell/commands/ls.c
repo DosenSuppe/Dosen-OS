@@ -1,29 +1,35 @@
 #include "../shell_util.h"
 #include "../os_bridge.h"
+#include "../fs.h"
 
 void ls(int argc, int **argv) {
-    int *files = files_buffer();
-    int count  = files[0];
+    int count = fs_file_count();
 
-    if (!count) {
+    if (count == 0) {
         prints("No files.", 1);
         return;
     }
 
     prints("All files:", 1);
 
-    for (int i = 0; i < count; i++) {
-        int *file   = files[i + 1];
-        int nameLen = file[0];
+    int i = 0;
+    while (i < count) {
+        int *entry  = fs_entry_by_idx(i);
+        int nameLen = entry[1];
 
         printi(i, 0);
         prints(" : ", 0);
 
-        // Filename is length-prefixed, not null-terminated, so prints() won't
-        // work here — walk it by hand.
-        for (int j = 0; j < nameLen; j++) {
-            tty_write_char(file[j + 1]);
+        int j = 0;
+        while (j < nameLen) {
+            tty_write_char(entry[2 + j]);
+            j = j + 1;
         }
-        tty_write_char(0xA);
+
+        prints(" (", 0);
+        printi(entry[16], 0);
+        prints(" blocks)", 1);
+
+        i = i + 1;
     }
 }

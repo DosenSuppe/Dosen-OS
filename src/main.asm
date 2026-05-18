@@ -3,7 +3,16 @@
 !IMPORT "Mappings/Characters.asm" AS Characters
 !IMPORT "Shell/shell.asm" AS Shell
 !IMPORT "Shell/shell_util.asm" AS ShellUtil
+!IMPORT "Shell/fs.asm" AS Fs
 !IMPORT "Shell/commands/ls.asm" AS LsCmd
+!IMPORT "Shell/commands/touch.asm" AS TouchCmd
+!IMPORT "Shell/commands/del.asm" AS DelCmd
+!IMPORT "Shell/commands/cat.asm" AS CatCmd
+!IMPORT "Shell/commands/write.asm" AS WriteCmd
+!IMPORT "Shell/commands/dofile.asm" AS DofileCmd
+!IMPORT "Shell/commands/blocks.asm" AS BlocksCmd
+!IMPORT "Shell/commands/edit.asm" AS EditCmd
+!IMPORT "Shell/editor.asm" AS Editor
 !IMPORT "Shell/os_bridge.asm" AS OsBridge
 !IMPORT "Drivers/ScreenDriver.asm" AS ScreenDriver
 
@@ -17,6 +26,8 @@ SET_SP $Stack.Start
 ; Initialize interrupt vector
 SET_IVR $InterruptVector.Start
 
+CALL fs_init
+CALL editor_init
 CALL shell_initialize
 CALL ScreenDriver.DrawCenterRedLine
 
