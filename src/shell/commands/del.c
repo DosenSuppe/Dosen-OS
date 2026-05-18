@@ -1,7 +1,7 @@
 #include "../shell_util.h"
 #include "../fs.h"
 
-void cmd_del(int *name, int name_len) {
+void del(int *name, int name_len) {
     if (name == 0 || name_len <= 0) {
         prints("del: missing filename", 1);
         return;

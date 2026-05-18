@@ -35,10 +35,12 @@ void dofile(int *name, int name_len) {
     prints("Wrote block ", 0);
     printi(bid, 0);
     prints(" to ", 0);
+
     int j = 0;
     while (j < name_len) {
         tty_write_char(name[j]);
-        j = j + 1;
+        j++;
     }
+
     tty_write_char(0xA);
 }

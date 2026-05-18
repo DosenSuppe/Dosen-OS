@@ -11,7 +11,7 @@
 //   buf[0]      = file_count
 //   buf[1..32]  = block_used[32]
 //   buf[33..]   = entries[8], 25 words each
-void cmd_blocks(int argc, int **argv) {
+void blocks(int argc, int **argv) {
     int *buf;
     int *e;
     int owner[32];
@@ -34,16 +34,19 @@ void cmd_blocks(int argc, int **argv) {
     i = 0;
     while (i < 32) {
         owner[i] = 0 - 1;
-        i = i + 1;
+        i++;
     }
 
     slot = 0;
     while (slot < 8) {
         off = 33 + slot * 25;
-        e   = &buf[off];
+        e = &buf[off];
+        
         if (e[0] == 1) {
+        
             bc = e[16];
             k  = 0;
+        
             while (k < bc) {
                 bid = e[17 + k];
                 if (bid >= 0) {
@@ -51,19 +54,19 @@ void cmd_blocks(int argc, int **argv) {
                         owner[bid] = slot;
                     }
                 }
-                k = k + 1;
+                k++;
             }
         }
-        slot = slot + 1;
+        slot++;
     }
 
     used = 0;
     i = 0;
     while (i < 32) {
         if (buf[1 + i] != 0) {
-            used = used + 1;
+            used++;
         }
-        i = i + 1;
+        i++;
     }
 
     prints("Block map (32 blocks x 64 words):", 1);
@@ -71,14 +74,19 @@ void cmd_blocks(int argc, int **argv) {
     row = 0;
     while (row < 4) {
         col = 0;
+
         while (col < 8) {
             bid = row * 8 + col;
+
             if (bid < 10) {
                 tty_write_char(' ');
             }
+
             printi(bid, 0);
             tty_write_char(':');
+            
             o = owner[bid];
+            
             if (o < 0) {
                 if (buf[1 + bid] != 0) {
                     tty_write_char('?');
@@ -88,11 +96,13 @@ void cmd_blocks(int argc, int **argv) {
             } else {
                 tty_write_char('0' + o);
             }
+
             tty_write_char(' ');
-            col = col + 1;
+            col++;
         }
+
         tty_write_char(0xA);
-        row = row + 1;
+        row++;
     }
 
     prints("Used: ", 0);
@@ -105,43 +115,50 @@ void cmd_blocks(int argc, int **argv) {
     slot = 0;
     while (slot < 8) {
         off = 33 + slot * 25;
-        e   = &buf[off];
+        e = &buf[off];
+
         if (e[0] == 1) {
             if (any == 0) {
                 prints("Files:", 1);
                 any = 1;
             }
+
             tty_write_char(' ');
             tty_write_char('0' + slot);
             prints(": ", 0);
 
             nl = e[1];
-            j  = 0;
+            j = 0;
+
             while (j < nl) {
                 tty_write_char(e[2 + j]);
-                j = j + 1;
+                j++;
             }
+
             while (j < 12) {
                 tty_write_char(' ');
-                j = j + 1;
+                j++;
             }
 
             prints("  blocks: ", 0);
             bc = e[16];
+
             if (bc == 0) {
                 prints("(none)", 0);
             } else {
                 k = 0;
+
                 while (k < bc) {
                     if (k > 0) {
                         prints(", ", 0);
                     }
                     printi(e[17 + k], 0);
-                    k = k + 1;
+                    k++;
                 }
             }
             tty_write_char(0xA);
         }
-        slot = slot + 1;
+
+        slot++;
     }
 }

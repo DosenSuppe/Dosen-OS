@@ -8,7 +8,7 @@
 // Enters the line-append editor. File is created if it doesn't exist;
 // otherwise its current contents are preloaded into the draft. See
 // editor.h for the sentinel commands.
-void cmd_edit(int *name, int name_len) {
+void edit(int *name, int name_len) {
     if (name == 0 || name_len <= 0) {
         prints("edit: missing filename", 1);
         return;

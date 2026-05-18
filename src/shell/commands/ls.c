@@ -23,13 +23,13 @@ void ls(int argc, int **argv) {
         int j = 0;
         while (j < nameLen) {
             tty_write_char(entry[2 + j]);
-            j = j + 1;
+            j++;
         }
 
         prints(" (", 0);
         printi(entry[16], 0);
         prints(" blocks)", 1);
 
-        i = i + 1;
+        i++;
     }
 }

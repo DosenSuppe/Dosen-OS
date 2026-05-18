@@ -4,7 +4,7 @@
 
 // Print the file's contents to TTY. Stops at the first NUL byte if encountered,
 // otherwise prints up to block_count * 64 chars.
-void cmd_cat(int *name, int name_len) {
+void cat(int *name, int name_len) {
     if (name == 0 || name_len <= 0) {
         prints("cat: missing filename", 1);
         return;
@@ -26,16 +26,22 @@ void cmd_cat(int *name, int name_len) {
     while (b < bc) {
         int *blk = fs_block_data(e[17 + b]);
         int i = 0;
+    
         while (i < 64) {
             int ch = blk[i];
+    
             if (ch == 0) {
                 tty_write_char(0xA);
                 return;
             }
+    
             tty_write_char(ch);
-            i = i + 1;
+    
+            i++;
         }
-        b = b + 1;
+    
+        b++;
     }
+
     tty_write_char(0xA);
 }

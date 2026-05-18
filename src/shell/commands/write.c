@@ -6,7 +6,7 @@
 //
 // Overwrites <name>'s contents with <text>. File must already exist
 // (use touch / dofile first). Blocks are reallocated from scratch.
-void cmd_write(int *args, int args_len) {
+void write(int *args, int args_len) {
     int sp;
     int name_len;
     int text_len;
@@ -24,7 +24,7 @@ void cmd_write(int *args, int args_len) {
 
     sp = 0;
     while (sp < args_len && args[sp] != 0x20) {
-        sp = sp + 1;
+        sp++;
     }
 
     if (sp >= args_len) {
@@ -33,7 +33,7 @@ void cmd_write(int *args, int args_len) {
     }
 
     name_len = sp;
-    text     = &args[sp + 1];
+    text = &args[sp + 1];
     text_len = args_len - sp - 1;
 
     e = fs_find(args, name_len);
@@ -47,6 +47,7 @@ void cmd_write(int *args, int args_len) {
     written = 0;
     while (written < text_len) {
         bid = fs_alloc_block(e);
+
         if (bid < 0) {
             prints("write: out of blocks", 1);
             return;
@@ -56,14 +57,14 @@ void cmd_write(int *args, int args_len) {
         i = 0;
         while (i < 64) {
             blk[i] = 0;
-            i = i + 1;
+            i++;
         }
 
         i = 0;
         while (i < 64 && written < text_len) {
             blk[i] = text[written];
             written = written + 1;
-            i = i + 1;
+            i++;
         }
     }
 

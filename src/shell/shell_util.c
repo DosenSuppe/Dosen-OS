@@ -81,6 +81,7 @@ void int_to_decimal_string(int num, char *buffer) {
             buffer[0] = '-'; buffer[1] = '8'; buffer[2] = '3';
             buffer[3] = '8'; buffer[4] = '8'; buffer[5] = '6';
             buffer[6] = '0'; buffer[7] = '8'; buffer[8] = 0;
+
             return;
         }
     }
@@ -89,21 +90,22 @@ void int_to_decimal_string(int num, char *buffer) {
     while (num > 0) {
         int digit = num % 10;
         temp[i] = '0' + digit; // '0' is 48
-        i = i + 1;
+        i++;
+
         num = num / 10;
     }
 
     // Append negative sign if needed
     if (is_negative) {
         buffer[j] = '-';
-        j = j + 1;
+        j++;
     }
 
     // Reverse the temporary buffer into the final buffer
     while (i > 0) {
-        i = i - 1;
+        i--;
         buffer[j] = temp[i];
-        j = j + 1;
+        j++;
     }
 
     // Null terminate the string
