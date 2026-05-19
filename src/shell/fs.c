@@ -1,4 +1,6 @@
 #include "shell_util.h"
+#include "../utils/malloc.h"
+#include "../utils/stdio.h"
 
 // See fs.h for layout. Constants are inlined below since the cc.py compiler's
 // #define support is unverified in this project.
@@ -10,6 +12,14 @@
 //   MAX_BLOCKS_PER_FILE = 8
 //   ENTRY_SIZE     = 25
 //   HEADER_SIZE    = 1 + 32 = 33
+
+struct Entry {
+    int isDirectory;
+    int *name;
+    int size;
+    int lastChangeDate;
+    int creationDate;
+};
 
 int *fs_storage(void) {
     asm("LDI REA, $FileStorage.Start");

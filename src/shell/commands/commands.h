@@ -7,4 +7,3 @@ extern void cat(int *name, int name_len);
 extern void write(int *args, int args_len);
 extern void dofile(int *name, int name_len);
 extern void blocks(int argc, int **argv);
-extern void edit(int *name, int name_len);

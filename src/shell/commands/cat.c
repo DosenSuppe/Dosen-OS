@@ -1,6 +1,7 @@
 #include "../shell_util.h"
 #include "../os_bridge.h"
 #include "../fs.h"
+#include "../../utils/stdio.h"
 
 // Print the file's contents to TTY. Stops at the first NUL byte if encountered,
 // otherwise prints up to block_count * 64 chars.

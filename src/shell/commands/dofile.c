@@ -1,6 +1,7 @@
 #include "../shell_util.h"
 #include "../os_bridge.h"
 #include "../fs.h"
+#include "../../utils/stdio.h"
 
 // Demo: ensure <name> exists, allocate a new block, write "Hi!" into it.
 // Useful for verifying the FS layer end-to-end (alloc, non-contiguous block

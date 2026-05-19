@@ -1,5 +1,6 @@
 #include "../shell_util.h"
 #include "../fs.h"
+#include "../../utils/stdio.h"
 
 void touch(int *name, int name_len) {
     if (name == 0 || name_len <= 0) {

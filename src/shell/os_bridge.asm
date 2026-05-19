@@ -32,6 +32,14 @@ tty_clear_screen:
     POP REX
     RTS
 
+ttyReadChar:
+    PUSH REX
+    GET_SP REX
+    CALL KeyboardDriver.Read
+    MOV REA, REB
+    POP REX
+    RTS
+
 ; void cpu_halt(void);
 ;   never returns
 cpu_halt:

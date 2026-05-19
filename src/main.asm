@@ -11,10 +11,10 @@
 !IMPORT "Shell/commands/write.asm" AS WriteCmd
 !IMPORT "Shell/commands/dofile.asm" AS DofileCmd
 !IMPORT "Shell/commands/blocks.asm" AS BlocksCmd
-!IMPORT "Shell/commands/edit.asm" AS EditCmd
-!IMPORT "Shell/editor.asm" AS Editor
 !IMPORT "Shell/os_bridge.asm" AS OsBridge
 !IMPORT "Drivers/ScreenDriver.asm" AS ScreenDriver
+!IMPORT "Utils/stdio.asm"
+!IMPORT "Utils/malloc.asm"
 
 !DECLARE KeyboardDevice = 0x01
 
@@ -27,8 +27,7 @@ SET_SP $Stack.Start
 SET_IVR $InterruptVector.Start
 
 CALL fs_init
-CALL editor_init
-CALL shell_initialize
+CALL Shell.shellInitialize
 CALL ScreenDriver.DrawCenterRedLine
 
 Prog:
@@ -49,20 +48,8 @@ JP_EQ HandleKeyboardInterrupt ; go to the keyboard driver
 JP InterruptDone
 
 HandleKeyboardInterrupt:
-    ; read character to screen
-    CALL KeyboardDriver.Read
-
-    ; checking for BackSpace that could eat the prompt "> "
-    LDI REA, Characters.Backspace
-    CMP REB, REA
-    JP_NEQ EchoToTTY    ; No backsapce -> write to TTY
-
-    LDI REA, $CommandCharacterBuffer.Start
-    LDI REC, [REA]
-    LDI REA, #0
-    CMP REC, REA
-    JP_EQ InterruptDone ; If buffer is empty (no char entered already) -> cancel input to not eat into prompt
-                        ; Else fall into EchoToTTY to write backspace
+    CALL Shell.onKeyPressed
+    JP InterruptDone
 
 EchoToTTY:
     ; write character to TTY
@@ -114,8 +101,8 @@ EchoToTTY:
     JP InterruptDone
 
 TriggerExecute:
-    CALL shell_execute
-    CALL shell_initialize
+    CALL Shell.shellExecute
+    CALL Shell.shellInitialize
     
     InterruptDone:
 

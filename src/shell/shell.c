@@ -11,27 +11,77 @@
 
 #include "shell_util.h"
 #include "os_bridge.h"
-#include "editor.h"
 #include "commands/commands.h"
+#include "../utils/stdio.h"
 
-void shell_initialize(void) {
-    int *buf;
-    buf = commands_buffer();
-    buf[0] = 0;
+int CHAR_BACKSPACE = 0x8;   // TODO: implement #define 
+int CHAR_ENTER = 0xA;
 
-    if (editor_is_active()) {
-        prints("..>", 0);
-    } else {
-        prints("You >", 0);
+int cmdStringBufferSize = 0;
+char cmdStringBuffer[64];
+
+void shellInitialize(void) {
+    prints("Initializing Shell!", 1);
+
+    clearBuffer();
+    newShellLine(0);
+}
+
+void clearBuffer(void) {
+    cmdStringBufferSize = 0;
+    cmdStringBuffer[0] = 0;
+}
+
+void newShellLine(int *str) {
+    prints("You >", 0);
+    
+    if (str != 0) {
+        prints(str, 0);
     }
 }
 
-void shell_execute(void) {
-    // Must be >= max command-buffer size (.CommandCharacterBuffer is 31
-    // words, so up to 30 chars of input). 32 leaves headroom and matches
-    // the buffer in one frame slot.
+void onKeyPressed(void) {
+    char character = ttyReadChar();
+
+    if (character == CHAR_ENTER) {
+        tty_write_char(CHAR_ENTER);
+
+        shellExecute();
+        shellInitialize();
+        return;
+    }
+
+    if (character == CHAR_BACKSPACE) {
+        if (cmdStringBufferSize == 0) {
+            return;
+        }
+        cmdStringBuffer[cmdStringBufferSize] = 0;
+        cmdStringBufferSize--;
+    }
+
+    // stop when the buffer is full, and the last character typed was not a backspace
+    if (cmdStringBufferSize + 1 >= sizeof(cmdStringBuffer) && character != CHAR_BACKSPACE ) {
+        prints("", 1);
+        prints("Command too long! Max: ", 0);
+        printi(sizeof(cmdStringBuffer), 0);
+        prints(" characters. ADDR: ", 0);
+        printi((int) cmdStringBuffer, 1);
+
+        newShellLine(cmdStringBuffer); 
+        return;
+    }
+
+    if (character != CHAR_BACKSPACE) {
+        cmdStringBuffer[cmdStringBufferSize] = character;
+        cmdStringBufferSize++;
+        cmdStringBuffer[cmdStringBufferSize] = '\0';
+    }
+
+    printc(character);
+}
+
+void shellExecute(void) {
     int local_args[32];
-    int *buf;
     int len;
     int idx;
     int sp;
@@ -39,79 +89,75 @@ void shell_execute(void) {
     int arg_len;
     int i;
 
-    buf = commands_buffer();
-    len = buf[0];
-
-    // In edit mode every line — including empty ones and leading-space
-    // ones — feeds the draft buffer instead of the command parser.
-    if (editor_is_active()) {
-        editor_handle_line();
-        return;
-    }
+    // FIX 1: The length is stored in our global counter, not index 0!
+    len = cmdStringBufferSize;
 
     if (len == 0) { return; }
 
     // Strip leading spaces by shifting the buffer left.
-    while (len > 0 && buf[1] == 0x20) {
-        idx = 1;
+    // FIX 2: First character is now at index 0, not index 1.
+    while (len > 0 && cmdStringBuffer[0] == 0x20) {
+        idx = 0;
 
-        while (idx < len) {
-            buf[idx] = buf[idx + 1];
+        while (idx < len - 1) {
+            cmdStringBuffer[idx] = cmdStringBuffer[idx + 1];
             idx = idx + 1;
         }
-        buf[0] = len - 1;
-        len = buf[0];
+        
+        // Update both local and global length counters
+        len = len - 1;
+        cmdStringBufferSize = len;
+        cmdStringBuffer[len] = '\0'; // Keep it null-terminated
     }
 
     if (len == 0) { return; }
 
-    // Locate the first space (= end of the command word). If no space,
-    // sp = len + 1 and there are no args.
-    sp = 1;
+    // Locate the first space (= end of the command word).
+    // FIX 3: Start looking at index 0
+    sp = 0;
 
-    while (sp <= len && buf[sp] != 0x20) {
+    while (sp < len && cmdStringBuffer[sp] != 0x20) {
         sp = sp + 1;
     }
     
-    cmd_len = sp - 1;
+    cmd_len = sp; // The length of the command is exactly the index of the space
 
-    // Copy arg chars (after the space) into local_args so we never have
-    // to take the address of a buffer element (avoids &buf[x] notation,
-    // which the cc.py compiler hasn't been verified to support).
+    // Copy arg chars (after the space) into local_args
     arg_len = 0;
     
+    // FIX 4: If space index is less than total string length, we have arguments
     if (sp < len) {
-        arg_len = len - sp;
+        arg_len = len - (sp + 1); // Skip the space itself
         i = 0;
 
         while (i < arg_len) {
-            local_args[i] = buf[sp + i + 1];
+            // Grab characters starting right after the space
+            local_args[i] = cmdStringBuffer[sp + 1 + i];
             i++;
         }
     }
 
+    // Command matching blocks (No changes needed here!)
     if (cmd_len == 2) {
-        if (matches(buf, 2, "ls")) { ls(0, 0); return; }
+        if (matches(cmdStringBuffer, 2, "ls")) { ls(0, 0); return; }
     }
     if (cmd_len == 3) {
-        if (matches(buf, 3, "cls")) { tty_clear_screen(); return; }
-        if (matches(buf, 3, "del")) { del(local_args, arg_len); return; }
-        if (matches(buf, 3, "cat")) { cat(local_args, arg_len); return; }
-        if (matches(buf, 3, "run")) { print_not_impl("run"); return; }
+        if (matches(cmdStringBuffer, 3, "cls")) { tty_clear_screen(); return; }
+        if (matches(cmdStringBuffer, 3, "del")) { del(local_args, arg_len); return; }
+        if (matches(cmdStringBuffer, 3, "cat")) { cat(local_args, arg_len); return; }
+        if (matches(cmdStringBuffer, 3, "run")) { print_not_impl("run"); return; }
     }
     if (cmd_len == 4) {
-        if (matches(buf, 4, "halt")) { cpu_halt(); return; }
-        if (matches(buf, 4, "edit")) { edit(local_args, arg_len); return; }
+        if (matches(cmdStringBuffer, 4, "halt")) { cpu_halt(); return; }
     }
     if (cmd_len == 5) {
-        if (matches(buf, 5, "touch")) { touch(local_args, arg_len); return; }
-        if (matches(buf, 5, "write")) { write(local_args, arg_len); return; }
+        if (matches(cmdStringBuffer, 5, "touch")) { touch(local_args, arg_len); return; }
+        if (matches(cmdStringBuffer, 5, "write")) { write(local_args, arg_len); return; }
     }
     if (cmd_len == 6) {
-        if (matches(buf, 6, "dofile")) { dofile(local_args, arg_len); return; }
-        if (matches(buf, 6, "blocks")) { blocks(0, 0); return; }
+        if (matches(cmdStringBuffer, 6, "dofile")) { dofile(local_args, arg_len); return; }
+        if (matches(cmdStringBuffer, 6, "blocks")) { blocks(0, 0); return; }
     }
-
 
     prints("Command not found!", 1);
 }

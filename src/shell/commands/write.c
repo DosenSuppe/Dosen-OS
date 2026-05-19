@@ -1,6 +1,7 @@
 #include "../shell_util.h"
 #include "../os_bridge.h"
 #include "../fs.h"
+#include "../../utils/stdio.h"
 
 // Usage: write <name> <text>
 //

@@ -1,6 +1,7 @@
 #include "../shell_util.h"
 #include "../os_bridge.h"
 #include "../fs.h"
+#include "../../utils/stdio.h"
 
 // Visualizes the block pool: which of the 32 blocks are allocated and which
 // file slot (0..7) owns each. Free blocks render as '.'; a block flagged
