@@ -2,23 +2,26 @@
 #include "../fs.h"
 #include "../../utils/stdio.h"
 
-void touch(int *name, int name_len) {
-    if (name == 0 || name_len <= 0) {
+void touch(int argc, int **argv) {
+    if (argc < 2) {
         prints("touch: missing filename", 1);
         return;
     }
+
+    const char *name = argv[1];
+    const int nameLen = strLength(name);
     
-    if (name_len > 12) {
+    if (nameLen > 12) {
         prints("touch: filename too long (max 12)", 1);
         return;
     }
 
-    if (fs_find(name, name_len) != 0) {
+    if (fs_find(name, nameLen) != 0) {
         prints("touch: already exists", 1);
         return;
     }
 
-    int *e = fs_create(name, name_len);
+    int *e = fs_create(name, nameLen);
     if (e == 0) {
         prints("touch: no free slots", 1);
         return;

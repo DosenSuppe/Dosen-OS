@@ -7,37 +7,19 @@
 //
 // Overwrites <name>'s contents with <text>. File must already exist
 // (use touch / dofile first). Blocks are reallocated from scratch.
-void write(int *args, int args_len) {
-    int sp;
-    int name_len;
-    int text_len;
-    int *text;
-    int *e;
-    int written;
-    int i;
-    int bid;
-    int *blk;
-
-    if (args == 0 || args_len <= 0) {
-        prints("write: missing filename", 1);
+void write(int argc, int **argv) {
+    if (argc < 3) {
+        prints("write: usage: write <name> <text>", 1);
         return;
     }
 
-    sp = 0;
-    while (sp < args_len && args[sp] != 0x20) {
-        sp++;
-    }
+    const char *name = argv[1];
+    const char *text = argv[2];
 
-    if (sp >= args_len) {
-        prints("write: missing text", 1);
-        return;
-    }
+    const int nameLen = strLength(name);
+    const int textLen = strLength(text);
 
-    name_len = sp;
-    text = &args[sp + 1];
-    text_len = args_len - sp - 1;
-
-    e = fs_find(args, name_len);
+    int *e = fs_find(name, nameLen);
     if (e == 0) {
         prints("write: not found (touch it first)", 1);
         return;
@@ -45,15 +27,17 @@ void write(int *args, int args_len) {
 
     fs_free_blocks(e);
 
-    written = 0;
-    while (written < text_len) {
-        bid = fs_alloc_block(e);
+    int written = 0;
+    int i = 0;
+    while (written < textLen) {
+        const int bid = fs_alloc_block(e);
 
         if (bid < 0) {
             prints("write: out of blocks", 1);
             return;
         }
-        blk = fs_block_data(bid);
+        
+        int *blk = fs_block_data(bid);
 
         i = 0;
         while (i < 64) {
@@ -62,7 +46,7 @@ void write(int *args, int args_len) {
         }
 
         i = 0;
-        while (i < 64 && written < text_len) {
+        while (i < 64 && written < textLen) {
             blk[i] = text[written];
             written = written + 1;
             i++;
@@ -70,6 +54,6 @@ void write(int *args, int args_len) {
     }
 
     prints("Wrote ", 0);
-    printi(text_len, 0);
+    printi(textLen, 0);
     prints(" chars.", 1);
 }

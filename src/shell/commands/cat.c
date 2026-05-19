@@ -3,23 +3,28 @@
 #include "../fs.h"
 #include "../../utils/stdio.h"
 
+const int CHAR_ENTER = 0xA;
+
 // Print the file's contents to TTY. Stops at the first NUL byte if encountered,
 // otherwise prints up to block_count * 64 chars.
-void cat(int *name, int name_len) {
-    if (name == 0 || name_len <= 0) {
-        prints("cat: missing filename", 1);
+void cat(int argc, int **argv) {
+    if (argc < 2) {
+        prints("Invalid arguments. Expected at least 1! cat <filename> ", 1);
         return;
     }
 
-    int *e = fs_find(name, name_len);
+    const char *name = argv[1];
+    const int nameLen = strLength(name);
+
+    int *e = fs_find(name, nameLen);
     if (e == 0) {
-        prints("cat: not found", 1);
+        prints("File not found!", 1);
         return;
     }
 
     int bc = e[16];
     if (bc == 0) {
-        prints("(empty)", 1);
+        prints("(file is empty)", 1);
         return;
     }
 
@@ -32,7 +37,7 @@ void cat(int *name, int name_len) {
             int ch = blk[i];
     
             if (ch == 0) {
-                tty_write_char(0xA);
+                tty_write_char(CHAR_ENTER);
                 return;
             }
     
@@ -44,5 +49,5 @@ void cat(int *name, int name_len) {
         b++;
     }
 
-    tty_write_char(0xA);
+    tty_write_char(CHAR_ENTER);
 }

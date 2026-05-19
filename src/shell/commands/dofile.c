@@ -6,15 +6,19 @@
 // Demo: ensure <name> exists, allocate a new block, write "Hi!" into it.
 // Useful for verifying the FS layer end-to-end (alloc, non-contiguous block
 // assignment, persistence across commands within a session).
-void dofile(int *name, int name_len) {
-    if (name == 0 || name_len <= 0) {
-        prints("dofile: missing filename", 1);
+void dofile(int argc, int **argv) {
+    if (argc < 2) {
+        prints("Invalid arguments. Expected at least 1! dofile <filename> ", 1);
         return;
     }
 
-    int *e = fs_find(name, name_len);
+    const char *name = argv[1];
+    const int nameLen = strLength(name);
+
+    int *e = fs_find(name, nameLen);
     if (e == 0) {
-        e = fs_create(name, name_len);
+        e = fs_create(name, nameLen);
+
         if (e == 0) {
             prints("dofile: cannot create", 1);
             return;
@@ -38,7 +42,7 @@ void dofile(int *name, int name_len) {
     prints(" to ", 0);
 
     int j = 0;
-    while (j < name_len) {
+    while (j < nameLen) {
         tty_write_char(name[j]);
         j++;
     }

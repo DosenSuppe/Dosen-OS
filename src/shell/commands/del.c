@@ -2,16 +2,26 @@
 #include "../fs.h"
 #include "../../utils/stdio.h"
 
-void del(int *name, int name_len) {
-    if (name == 0 || name_len <= 0) {
+void del(int argc, int **argv) {
+    if (argc < 2) {
+        prints("Invalid arguments. Expected at least 1! del <filename> ", 1);
+        return;
+    }
+    
+    const char *name = argv[1];
+    if (name == 0) {
         prints("del: missing filename", 1);
         return;
     }
 
-    if (fs_delete(name, name_len) == 0) {
-        prints("del: not found", 1);
+    const int nameLen = strLength(name);
+
+    if (fs_delete(name, nameLen) == 0) {
+        prints("File ", 0);
+        prints(name, 0);
+        prints(" not found! File not deleted!", 1);
         return;
     }
 
-    prints("Deleted.", 1);
+    prints("File deleted.", 1);
 }
