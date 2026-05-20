@@ -27,24 +27,84 @@ SET_IVR $InterruptVector.Start
 
 CALL fs_init
 
-LDI REA, Shell.onKeyPressed
-CALL SetTTYOwner
+; ensure pointer is initialized as 0
+LDI REA, #0
+LDI REB, $ProcStackTop.Start
+STR [REB], REA
+
+; default foreground process (shell)
+LDI REA, #0 ; shell has no main routine
+LDI REB, Shell.onKey
+CALL PushProc
 
 CALL Shell.shellInitialize
 CALL ScreenDriver.DrawCenterRedLine
 
-Prog:
-    NOP
-    JP Prog
+KernelDispatch:
+    PUSH RET
+    LDI RET, $ProcStackTop.Start
+    LDI REA, [RET]
+    POP RET
 
-@REA pointer for next TTY-Owner
-SetTTYOwner:
-    PUSH REB
+    LDI REB, $ProcStack.Start
+    ADD REA, REB ; absolute addr of mainLoop slot
 
-    LDI REB, $TTYOwner.Start
-    STR REB, REA
+    ; if mainLoop is null, the process is event-driven — just spin and let the ISR drive it
+    LDI REC, [REA]
+    LDI REB, #0
+    CMP REC, REB
+    JP_EQ KernelDispatch
 
-    POP REB
+    CALL [REA]
+    JP KernelDispatch
+
+@REA main routine
+@REB on-key ISR
+PushProc:
+    PUSH RET
+    PUSH REX
+    PUSH REY
+    PUSH REZ
+
+    LDI RET, #1
+    LDI REX, $ProcStack.Start
+    LDI REY, $ProcStackTop.Start
+    LDI REZ, [REY] ; get value of current proc-stack pointer
+
+    ADD REZ, REX ; apply pointer onto the stack to get current address
+
+    ; saving on-key routine to stack
+    ADD REZ, RET
+    STR [REZ], REB
+    
+    ; saving main routine to stack
+    ADD REZ, RET
+    STR [REZ], REA
+
+    SUB REZ, REX    ; remove the offset to get pure SP value again
+    STR [REY], REZ  ; save new SP value
+
+    POP REZ
+    POP REY
+    POP REX
+    POP RET
+    RTS
+
+PopProc:
+    PUSH REY
+    PUSH REZ
+    PUSH RET
+
+    LDI RET, #2
+
+    LDI REY, $ProcStackTop.Start
+    LDI REZ, [REY]  ; get value of current proc-stack pointer
+    SUB REZ, RET     ; remove top two entries
+    STR [REY], REZ  ; save new SP value
+
+    POP RET
+    POP REZ
+    POP REY
     RTS
 
 .InterruptVector
@@ -61,7 +121,23 @@ JP_EQ HandleKeyboardInterrupt
 JP InterruptDone
 
 HandleKeyboardInterrupt:
-    CALL Shell.onKeyPressed ; TODO: CALL[$TTYOwner.Start] -> CALL value of address is not working.
+    PUSH REB
+    PUSH RET
+    PUSH REZ
+
+    LDI REZ, $ProcStackTop.Start
+    LDI RET, #1
+    LDI REA, [REZ]
+    LDI REB, $ProcStack.Start
+    
+    ADD REA, REB ; add address offset
+    SUB REA, RET ; remove index offset for on-key routine
+    
+    POP REZ
+    POP RET
+    POP REB
+
+    CALL [REA] ; top most process has the keyboard handle
     JP InterruptDone
 
 InterruptDone:

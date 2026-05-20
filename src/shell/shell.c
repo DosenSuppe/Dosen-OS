@@ -40,7 +40,11 @@ void newShellLine(int *str) {
     }
 }
 
-void onKeyPressed(void) {
+void main(void) {
+    prints("Hello", 1);
+}
+
+void onKey(void) {
     char character = ttyReadChar();
 
     if (character == CHAR_ENTER) {
