@@ -29,13 +29,6 @@ int matches(int *buf, int len, int *str) {
 }
 
 /**
- * Returns the pointer for the commands buffer.
- */
-int *commands_buffer(void) {
-    asm("LDI REA, $CommandCharacterBuffer.Start");
-}
-
-/**
  * Returns the pointer for the files buffer.
  */
 int *files_buffer(void) {

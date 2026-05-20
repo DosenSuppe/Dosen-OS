@@ -1,9 +1,8 @@
 // Shell — C port of the original shell.asm and commands.asm.
 //
-// The keyboard interrupt handler (still in main.asm) fills the command
-// character buffer at $CommandCharacterBuffer.Start (= 0x004000). When the
-// user presses Enter, the handler calls shell_execute(), then calls
-// shell_initialize() to redraw the prompt.
+// The keyboard interrupt handler (still in main.asm) fills the command.
+// When the user presses Enter, the handler calls shell_execute(), then
+// calls shell_initialize() to redraw the prompt.
 //
 // Buffer layout (matches the original assembly contract):
 //   buf[0]      = current input length, in words
