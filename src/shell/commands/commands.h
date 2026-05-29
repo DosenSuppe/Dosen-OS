@@ -1,9 +1,7 @@
 #pragma once
 
-extern void ls(int argc, int **argv);
-extern void touch(int *name, int name_len);
-extern void del(int *name, int name_len);
-extern void cat(int *name, int name_len);
-extern void write(int *args, int args_len);
-extern void dofile(int *name, int name_len);
-extern void blocks(int argc, int **argv);
+// `run` is the single dispatcher every shell command flows through.
+// Forward decls of individual commands (ls, cat, etc.) live in run.c —
+// cc.py rejects redeclaring a function in the same translation unit, so
+// commands.h is kept to the one symbol shell.c actually needs.
+extern void run(int argc, int **argv);

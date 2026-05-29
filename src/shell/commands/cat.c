@@ -5,8 +5,7 @@
 
 const int CHAR_ENTER = 0xA;
 
-// Print the file's contents to TTY. Stops at the first NUL byte if encountered,
-// otherwise prints up to block_count * 64 chars.
+// Print the file's contents to TTY.
 void cat(int argc, int **argv) {
     if (argc < 2) {
         prints("Invalid arguments. Expected at least 1! cat <filename> ", 1);
@@ -22,32 +21,20 @@ void cat(int argc, int **argv) {
         return;
     }
 
-    int bc = e[16];
-    if (bc == 0) {
+    int size = e[1];
+    if (size == 0) {
         prints("(file is empty)", 1);
         return;
     }
 
-    int b = 0;
-    while (b < bc) {
-        int *blk = fs_block_data(e[17 + b]);
-        int i = 0;
-    
-        while (i < 64) {
-            int ch = blk[i];
-    
-            if (ch == 0) {
-                tty_write_char(CHAR_ENTER);
-                return;
-            }
-    
-            tty_write_char(ch);
-    
-            i++;
-        }
-    
-        b++;
+    int *data = fs_data_ptr(e);
+    int i = 0;
+    while (i < size) {
+        int ch = data[i];
+        if (ch == 0) { break; }
+        ttyWriteChar(ch);
+        i++;
     }
 
-    tty_write_char(CHAR_ENTER);
+    ttyWriteChar(CHAR_ENTER);
 }

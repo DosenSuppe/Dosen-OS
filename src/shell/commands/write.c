@@ -3,10 +3,12 @@
 #include "../fs.h"
 #include "../../utils/stdio.h"
 
+const int WRITE_MAX_FILE_BYTES = 0x1000;
+
 // Usage: write <name> <text>
 //
 // Overwrites <name>'s contents with <text>. File must already exist
-// (use touch / dofile first). Blocks are reallocated from scratch.
+// (use touch first). Marks the slot DIRTY so the host flushes it within ~250ms.
 void write(int argc, int **argv) {
     if (argc < 3) {
         prints("write: usage: write <name> <text>", 1);
@@ -25,35 +27,23 @@ void write(int argc, int **argv) {
         return;
     }
 
-    fs_free_blocks(e);
+    int limit = textLen;
+    if (limit > WRITE_MAX_FILE_BYTES) { limit = WRITE_MAX_FILE_BYTES; }
 
-    int written = 0;
+    int *data = fs_data_ptr(e);
     int i = 0;
-    while (written < textLen) {
-        const int bid = fs_alloc_block(e);
-
-        if (bid < 0) {
-            prints("write: out of blocks", 1);
-            return;
-        }
-        
-        int *blk = fs_block_data(bid);
-
-        i = 0;
-        while (i < 64) {
-            blk[i] = 0;
-            i++;
-        }
-
-        i = 0;
-        while (i < 64 && written < textLen) {
-            blk[i] = text[written];
-            written = written + 1;
-            i++;
-        }
+    while (i < limit) {
+        data[i] = text[i];
+        i++;
+    }
+    if (i < WRITE_MAX_FILE_BYTES) {
+        data[i] = 0;
     }
 
+    e[1] = limit;
+    fs_mark_dirty(e);
+
     prints("Wrote ", 0);
-    printi(textLen, 0);
+    printi(limit, 0);
     prints(" chars.", 1);
 }

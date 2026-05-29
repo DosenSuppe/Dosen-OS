@@ -1,26 +1,24 @@
-// Shell — C port of the original shell.asm and commands.asm.
+// Shell — line editor + dispatcher to `run`.
 //
-// The keyboard interrupt handler (still in main.asm) fills the command.
-// When the user presses Enter, the handler calls shell_execute(), then
-// calls shell_initialize() to redraw the prompt.
+// shell.c knows about exactly one program: `run`. Everything else is treated
+// as a program name — argv is shifted right and dispatched to run. So:
+//   run cls    → run(2, ["run", "cls"])
+//   cls        → run(2, ["run", "cls"])    (implicit prefix)
+//   run        → run(1, ["run"])           (prints missing-name error)
 //
-// Buffer layout (matches the original assembly contract):
-//   buf[0]      = current input length, in words
-//   buf[1..len] = characters typed since last command (one char per word)
+// Adding/removing commands no longer touches this file.
 
 #include "shell_util.h"
 #include "os_bridge.h"
 #include "commands/commands.h"
 #include "../utils/stdio.h"
 
-const int CHAR_BACKSPACE = 0x8;   // TODO: implement #define 
-const int CHAR_ENTER = 0xA;
-const int CHAR_SPACE = 0x20;
-
-const int MAX_BUFFER_SIZE = 64;  // TODO: add const to parser when using as bounds
+#define CHAR_BACKSPACE 0x8
+#define CHAR_ENTER 0xA
+#define MAX_BUFFER_SIZE 64
 
 int cmdStringBufferSize = 0;
-char cmdStringBuffer[64]; // TODO: Update with MAX_BUFFER_SIZE once parser is updated
+char cmdStringBuffer[64];
 
 void shellInitialize(void) {
     clearBuffer();
@@ -34,21 +32,17 @@ void clearBuffer(void) {
 
 void newShellLine(int *str) {
     prints("You >", 0);
-    
+
     if (str != 0) {
         prints(str, 0);
     }
-}
-
-void main(void) {
-    prints("Hello", 1);
 }
 
 void onKey(void) {
     char character = ttyReadChar();
 
     if (character == CHAR_ENTER) {
-        tty_write_char(CHAR_ENTER);
+        ttyWriteChar(CHAR_ENTER);
 
         shellExecute();
         shellInitialize();
@@ -63,14 +57,13 @@ void onKey(void) {
         cmdStringBuffer[cmdStringBufferSize] = 0;
     }
 
-    // stop when the buffer is full, and the last character typed was not a backspace
-    if (cmdStringBufferSize + 1 >= MAX_BUFFER_SIZE && character != CHAR_BACKSPACE ) {
-        tty_write_char(CHAR_ENTER);
+    if (cmdStringBufferSize + 1 >= MAX_BUFFER_SIZE && character != CHAR_BACKSPACE) {
+        ttyWriteChar(CHAR_ENTER);
         prints("Command too long! Max: ", 0);
         printi(MAX_BUFFER_SIZE, 0);
         prints(" characters.", 1);
 
-        newShellLine(cmdStringBuffer); 
+        newShellLine(cmdStringBuffer);
         return;
     }
 
@@ -84,39 +77,35 @@ void onKey(void) {
 }
 
 void shellExecute(void) {
+    int argc;
+    int *argv[8];
+    int *shifted[8];
+    int *cmd;
+    int len;
+    int i;
+
     if (cmdStringBufferSize == 0) { return; }
 
-    int argc = 0;
-    int *argv[4];
-
+    argc = 0;
     tokenize(cmdStringBuffer, &argc, argv);
-
     if (argc == 0) { return; }
-    
-    const char cmd = argv[0];
-    const int cmdLength = strLength(cmd);
 
-    // Command matching blocks (No changes needed here!)
-    if (cmdLength == 2) {
-        if (matches(cmd, 2, "ls")) { ls(argc, argv); return; }
-    }
-    if (cmdLength == 3) {
-        if (matches(cmd, 3, "cls")) { tty_clear_screen(); return; }
-        if (matches(cmd, 3, "del")) { del(argc, argv); return; }
-        if (matches(cmd, 3, "cat")) { cat(argc, argv); return; }
-        if (matches(cmd, 3, "run")) { print_not_impl("run"); return; }
-    }
-    if (cmdLength == 4) {
-        if (matches(cmd, 4, "halt")) { cpu_halt(); return; }
-    }
-    if (cmdLength == 5) {
-        if (matches(cmd, 5, "touch")) { touch(argc, argv); return; }
-        if (matches(cmd, 5, "write")) { write(argc, argv); return; }
-    }
-    if (cmdLength == 6) {
-        if (matches(cmd, 6, "dofile")) { dofile(argc, argv); return; }
-        if (matches(cmd, 6, "blocks")) { blocks(argc, argv); return; }
+    cmd = argv[0];
+    len = strLength(cmd);
+
+    // Explicit `run X args...` — argv already has the shape run expects.
+    if (matches(cmd, len, "run")) {
+        run(argc, argv);
+        return;
     }
 
-    prints("Command not found!", 1);
+    // Implicit prefix: turn `X args...` into `run X args...`.
+    shifted[0] = "run";
+    i = 0;
+    while (i < argc) {
+        if (i + 1 >= 8) { break; }
+        shifted[i + 1] = argv[i];
+        i++;
+    }
+    run(argc + 1, shifted);
 }

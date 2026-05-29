@@ -10,9 +10,9 @@ void touch(int argc, int **argv) {
 
     const char *name = argv[1];
     const int nameLen = strLength(name);
-    
-    if (nameLen > 12) {
-        prints("touch: filename too long (max 12)", 1);
+
+    if (nameLen > 60) {
+        prints("touch: filename too long (max 60)", 1);
         return;
     }
 

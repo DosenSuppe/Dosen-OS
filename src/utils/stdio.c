@@ -1,7 +1,7 @@
 #include "../shell/os_bridge.h"
 
 void printc(char character) {
-    tty_write_char(character);
+    ttyWriteChar(character);
 }
 /**
  * Prints a string.
@@ -13,12 +13,12 @@ void prints(int *str, int newLine) {
     int i = 0;
 
     while (str[i] != '\0') {
-        tty_write_char(str[i]);
+        ttyWriteChar(str[i]);
         i++;
     }
 
     if (newLine) {
-        tty_write_char(0xA);
+        ttyWriteChar(0xA);
     }
 }
 
@@ -29,7 +29,7 @@ void printi(int val, int newLine) {
     prints(result, 0);
 
     if (newLine == 1) {
-        tty_write_char(0xA);
+        ttyWriteChar(0xA);
     }
 }
 

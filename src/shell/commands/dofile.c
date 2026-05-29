@@ -3,9 +3,8 @@
 #include "../fs.h"
 #include "../../utils/stdio.h"
 
-// Demo: ensure <name> exists, allocate a new block, write "Hi!" into it.
-// Useful for verifying the FS layer end-to-end (alloc, non-contiguous block
-// assignment, persistence across commands within a session).
+// Demo: ensure <name> exists, write "Hi!" to it, flush.
+// Useful for verifying the FS end-to-end (slot allocation, data write, host flush).
 void dofile(int argc, int **argv) {
     if (argc < 2) {
         prints("Invalid arguments. Expected at least 1! dofile <filename> ", 1);
@@ -18,34 +17,25 @@ void dofile(int argc, int **argv) {
     int *e = fs_find(name, nameLen);
     if (e == 0) {
         e = fs_create(name, nameLen);
-
         if (e == 0) {
             prints("dofile: cannot create", 1);
             return;
         }
     }
 
-    int bid = fs_alloc_block(e);
-    if (bid < 0) {
-        prints("dofile: no free blocks", 1);
-        return;
-    }
+    int *data = fs_data_ptr(e);
+    data[0] = 'H';
+    data[1] = 'i';
+    data[2] = '!';
+    data[3] = 0;
+    e[1] = 3;
+    fs_mark_dirty(e);
 
-    int *blk = fs_block_data(bid);
-    blk[0] = 'H';
-    blk[1] = 'i';
-    blk[2] = '!';
-    blk[3] = 0;
-
-    prints("Wrote block ", 0);
-    printi(bid, 0);
-    prints(" to ", 0);
-
+    prints("Wrote 'Hi!' to ", 0);
     int j = 0;
     while (j < nameLen) {
-        tty_write_char(name[j]);
+        ttyWriteChar(name[j]);
         j++;
     }
-
-    tty_write_char(0xA);
+    ttyWriteChar(0xA);
 }

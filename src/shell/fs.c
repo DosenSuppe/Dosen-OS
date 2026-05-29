@@ -1,67 +1,58 @@
-#include "shell_util.h"
-#include "../utils/malloc.h"
 #include "../utils/stdio.h"
 
-// See fs.h for layout. Constants are inlined below since the cc.py compiler's
-// #define support is unverified in this project.
-//
-//   MAX_FILES      = 8
-//   NAME_MAX       = 12
-//   BLOCK_SIZE     = 64
-//   TOTAL_BLOCKS   = 32
-//   MAX_BLOCKS_PER_FILE = 8
-//   ENTRY_SIZE     = 25
-//   HEADER_SIZE    = 1 + 32 = 33
+// Device constants — see PermaStorageDevice changelog.
+const int FS_MAX_FILES      = 64;
+const int FS_ENTRY_WORDS    = 64;
+const int FS_DATA_AREA      = 0x1000;   // device-internal start of data
+const int FS_MAX_FILE_BYTES = 0x1000;   // 4 KW quota per slot
 
-struct Entry {
-    int isDirectory;
-    int *name;
-    int size;
-    int lastChangeDate;
-    int creationDate;
-};
+const int FS_E_STATUS       = 0;
+const int FS_E_SIZE         = 1;
+const int FS_E_DATA_OFFSET  = 2;
+const int FS_E_RESERVED     = 3;
+const int FS_E_NAME         = 4;
+const int FS_NAME_MAX       = 60;
 
-int *fs_storage(void) {
-    asm("LDI REA, $FileStorage.Start");
-}
+const int FS_ST_EMPTY       = 0;
+const int FS_ST_PRESENT     = 1;
+const int FS_ST_DIRTY       = 2;
 
-int *fs_entry_ptr(int slot) {
-    int *buf = files_buffer();
-    int off  = 33 + slot * 25;
-    return &buf[off];
+// Returns the OS address of slot 6 — also the device's offset-0.
+int *fs_device_base(void) {
+    asm("LDI REA, $MemDevice6.Start");
 }
 
 void fs_init(void) {
-    int *buf = files_buffer();
-    int i = 0;
+    // No-op. Any slots populated by the host on boot stay; empty slots stay 0.
+}
 
-    buf[0] = 0;
+int *fs_entry_by_slot(int slot) {
+    if (slot < 0) { return 0; }
+    if (slot >= FS_MAX_FILES) { return 0; }
 
-    while (i < 32) {
-        buf[1 + i] = 0;
-        i = i + 1;
-    }
-
-    i = 0;
-    while (i < 8) {
-        int *e = fs_entry_ptr(i);
-        e[0] = 0;
-        i++;
-    }
+    int *base = fs_device_base();
+    return &base[slot * FS_ENTRY_WORDS];
 }
 
 int fs_file_count(void) {
-    int *buf = files_buffer();
-    return buf[0];
+    int count = 0;
+    int slot = 0;
+    while (slot < FS_MAX_FILES) {
+        int *e = fs_entry_by_slot(slot);
+        if (e[FS_E_STATUS] != FS_ST_EMPTY) {
+            count++;
+        }
+        slot++;
+    }
+    return count;
 }
 
 int *fs_entry_by_idx(int idx) {
     int active = 0;
     int slot = 0;
-
-    while (slot < 8) {
-        int *e = fs_entry_ptr(slot);
-        if (e[0] == 1) {
+    while (slot < FS_MAX_FILES) {
+        int *e = fs_entry_by_slot(slot);
+        if (e[FS_E_STATUS] != FS_ST_EMPTY) {
             if (active == idx) { return e; }
             active++;
         }
@@ -70,13 +61,21 @@ int *fs_entry_by_idx(int idx) {
     return 0;
 }
 
-int fs_name_equals(int *entry, int *name, int name_len) {
-    if (entry[1] != name_len) { return 0; }
-    
+int fs_name_length(int *entry) {
     int i = 0;
+    while (i < FS_NAME_MAX) {
+        if (entry[FS_E_NAME + i] == 0) { return i; }
+        i++;
+    }
+    return FS_NAME_MAX;
+}
 
+int fs_name_equals(int *entry, int *name, int name_len) {
+    if (fs_name_length(entry) != name_len) { return 0; }
+
+    int i = 0;
     while (i < name_len) {
-        if (entry[2 + i] != name[i]) { return 0; }
+        if (entry[FS_E_NAME + i] != name[i]) { return 0; }
         i++;
     }
     return 1;
@@ -84,45 +83,45 @@ int fs_name_equals(int *entry, int *name, int name_len) {
 
 int *fs_find(int *name, int name_len) {
     int slot = 0;
-
-    while (slot < 8) {
-        int *e = fs_entry_ptr(slot);
-        if (e[0] == 1) {
-            if (fs_name_equals(e, name, name_len) == 1) { return e; }
+    while (slot < FS_MAX_FILES) {
+        int *e = fs_entry_by_slot(slot);
+        if (e[FS_E_STATUS] != FS_ST_EMPTY) {
+            if (fs_name_equals(e, name, name_len) == 1) {
+                return e;
+            }
         }
         slot++;
     }
-
     return 0;
 }
 
 int *fs_create(int *name, int name_len) {
-    if (name_len <= 0)  { return 0; }
-    if (name_len > 12)  { return 0; }
-    if (fs_find(name, name_len) != 0) { return 0; }
+    if (name_len <= 0)              { return 0; }
+    if (name_len > FS_NAME_MAX)     { return 0; }
+    if (fs_find(name, name_len))    { return 0; }
 
     int slot = 0;
+    while (slot < FS_MAX_FILES) {
+        int *e = fs_entry_by_slot(slot);
+        if (e[FS_E_STATUS] == FS_ST_EMPTY) {
+            // Fill the entry except status. Status is set LAST so a host
+            // peek can't observe a half-written slot as present.
+            e[FS_E_SIZE]        = 0;
+            e[FS_E_DATA_OFFSET] = FS_DATA_AREA + slot * FS_MAX_FILE_BYTES;
+            e[FS_E_RESERVED]    = 0;
 
-    while (slot < 8) {
-        int *e = fs_entry_ptr(slot);
-        if (e[0] == 0) {
-            e[0] = 1;
-            e[1] = name_len;
-            
             int i = 0;
-
             while (i < name_len) {
-                e[2 + i] = name[i];
+                e[FS_E_NAME + i] = name[i];
+                i++;
+            }
+            while (i < FS_NAME_MAX) {
+                e[FS_E_NAME + i] = 0;
                 i++;
             }
 
-            e[14] = 0;
-            e[15] = 0;
-            e[16] = 0;
-
-            int *buf = files_buffer();
-            buf[0]++; // TODO: check if this works
-
+            // DIRTY so the host creates the on-disk file.
+            e[FS_E_STATUS] = FS_ST_DIRTY;
             return e;
         }
         slot++;
@@ -134,61 +133,16 @@ int fs_delete(int *name, int name_len) {
     int *e = fs_find(name, name_len);
     if (e == 0) { return 0; }
 
-    int *buf = files_buffer();
-    int bc = e[16];
-    int i = 0;
-
-    while (i < bc) {
-        int bid = e[17 + i];
-        buf[1 + bid] = 0;
-        i++;
-    }
-
-    e[0] = 0;
-    buf[0] = buf[0] - 1;
-
+    // Per changelog: setting status to 0 does NOT delete the host file.
+    e[FS_E_STATUS] = FS_ST_EMPTY;
     return 1;
 }
 
-// Releases every block the file owns back to the pool and resets its
-// block_count to 0. The entry itself stays in_use.
-void fs_free_blocks(int *entry) {
-    int *buf = files_buffer();
-    int bc = entry[16];
-    int i = 0;
-
-    while (i < bc) {
-        int bid = entry[17 + i];
-        buf[1 + bid] = 0;
-        i++;
-    }
-
-    entry[16] = 0;
+int *fs_data_ptr(int *entry) {
+    int *base = fs_device_base();
+    return &base[entry[FS_E_DATA_OFFSET]];
 }
 
-// Finds any free block, marks it used, appends to entry's block list.
-// Returns block id on success, or -1 if the file is full / pool is full.
-int fs_alloc_block(int *entry) {
-    if (entry[16] >= 8) { return 0 - 1; }
-
-    int *buf = files_buffer();
-    int i = 0;
-
-    while (i < 32) {
-        if (buf[1 + i] == 0) {
-            buf[1 + i] = 1;
-            entry[17 + entry[16]] = i;
-            entry[16] = entry[16] + 1;
-
-            return i;
-        }
-        i++;
-    }
-
-    return 0 - 1;
-}
-
-int *fs_block_data(int block_id) {
-    int *base = fs_storage();
-    return &base[block_id * 64];
+void fs_mark_dirty(int *entry) {
+    entry[FS_E_STATUS] = FS_ST_DIRTY;
 }
