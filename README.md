@@ -328,8 +328,6 @@ src/
 │   ├── KeyboardDriver.asm    MMIO read for keyboard
 │   ├── TTYDriver.asm         Character output + clear-screen
 │   └── ScreenDriver.asm      Framebuffer demo (red bar)
-├── mappings/
-│   └── Characters.asm        ASCII constants for use in DASM
 ├── utils/
 │   └── String.asm            Legacy ASM string routines
 └── shell/
