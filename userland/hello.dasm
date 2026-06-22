@@ -1,0 +1,52 @@
+; hello.dasm — a minimal disk-loadable program for Dosen-OS.
+;
+; This is NOT compiled into the OS image. It is assembled and linked on its own
+; (based at $UserCode.Start = 0x01500000), then packed into a byte-per-word file
+; and dropped into the host PermStorage folder by BuildProgram.ps1. At runtime
+; `run hello` finds it in the file system, the loader unpacks it into .UserCode,
+; and calls the entry below.
+;
+; See docs/Writing-Programs.md (Packed disk-program format) for the full story.
+;
+; --- ABI contract ---
+; The packer prepends the 3-word header {magic, version, entry_off}, so the body
+; copied into .UserCode starts exactly at this file's first instruction. The
+; entry therefore sits at body offset 0. Keep the entry as the first thing in
+; the .Program segment.
+;
+; On entry (pushed by launchProgram, C calling convention, byte-addressed):
+;   argc at [FP+12], argv at [FP+16]   (after PUSH REX; GET_SP REX)
+; On exit: RTS with the exit code in REA (0 = success).
+;
+; Kernel services are reached through the fixed-address syscall table; their
+; addresses never move, so they survive the relocation to .UserCode.
+
+!DECLARE SYS_prints = 0x00010000    ; void prints(int *str, int newLine)
+
+.Program
+
+; --- entry(argc, argv) ------------------------------------------------------
+PUSH REX
+GET_SP REX
+
+; prints(msg, 1)  — C convention: push args right-to-left, clean up after.
+LDI REA, #1
+PUSH REA                    ; arg1: newLine = 1
+LDI REA, msg
+PUSH REA                    ; arg0: msg
+LDI REA, [SYS_prints]       ; load prints' address from the syscall slot
+CALL REA
+POP REC                     ; discard arg0
+POP REC                     ; discard arg1
+
+POP REX
+LDI REA, #0                 ; exit code 0
+RTS
+
+; --- data -------------------------------------------------------------------
+; "Hello from disk!" — one ASCII code per word, null-terminated (prints stops at 0).
+msg:
+DW #0x48, #0x65, #0x6C, #0x6C, #0x6F, #0x20     ; "Hello "
+DW #0x66, #0x72, #0x6F, #0x6D, #0x20            ; "from "
+DW #0x64, #0x69, #0x73, #0x6B, #0x21            ; "disk!"
+DW #0x00

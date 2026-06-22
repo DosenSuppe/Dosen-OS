@@ -2,6 +2,7 @@
 #include "../os_bridge.h"
 #include "../fs.h"
 #include "../../utils/stdio.h"
+#include "../../utils/string.h"
 
 // Demo: ensure <name> exists, write "Hi!" to it, flush.
 // Useful for verifying the FS end-to-end (slot allocation, data write, host flush).
@@ -12,7 +13,7 @@ void dofile(int argc, int **argv) {
     }
 
     const char *name = argv[1];
-    const int nameLen = strLength(name);
+    const int nameLen = stringLen(name);
 
     int *e = fs_find(name, nameLen);
     if (e == 0) {

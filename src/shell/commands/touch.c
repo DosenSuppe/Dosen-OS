@@ -1,6 +1,7 @@
 #include "../shell_util.h"
 #include "../fs.h"
 #include "../../utils/stdio.h"
+#include "../../utils/string.h"
 
 void touch(int argc, int **argv) {
     if (argc < 2) {
@@ -9,7 +10,7 @@ void touch(int argc, int **argv) {
     }
 
     const char *name = argv[1];
-    const int nameLen = strLength(name);
+    const int nameLen = stringLen(name);
 
     if (nameLen > 60) {
         prints("touch: filename too long (max 60)", 1);

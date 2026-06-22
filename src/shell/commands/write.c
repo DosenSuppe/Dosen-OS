@@ -2,6 +2,7 @@
 #include "../os_bridge.h"
 #include "../fs.h"
 #include "../../utils/stdio.h"
+#include "../../utils/string.h"
 
 const int WRITE_MAX_FILE_BYTES = 0x1000;
 
@@ -18,8 +19,8 @@ void write(int argc, int **argv) {
     const char *name = argv[1];
     const char *text = argv[2];
 
-    const int nameLen = strLength(name);
-    const int textLen = strLength(text);
+    const int nameLen = stringLen(name);
+    const int textLen = stringLen(text);
 
     int *e = fs_find(name, nameLen);
     if (e == 0) {

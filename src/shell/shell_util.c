@@ -3,7 +3,7 @@
 
 const int CHAR_SPACE = 0x20;
 
-// Returns 1 iff str (null-terminated) equals the first `len` chars of buf.
+// Returns 1 if str (null-terminated) equals the first `len` chars of buf.
 // The trailing-null check on str catches "str is longer than expected" so the
 // caller doesn't have to length-check both sides.
 int matches(int *buf, int len, int *str) {
@@ -41,10 +41,4 @@ void tokenize(char *str, int *argc, int **argv) {
         }
         i++;
     }
-}
-
-int strLength(int *str) {
-    int i;
-    for (i = 0; str[i] != '\0'; i++) {}
-    return i;
 }

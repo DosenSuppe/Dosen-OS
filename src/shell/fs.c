@@ -1,25 +1,24 @@
 #include "../utils/stdio.h"
 
-// Device constants — see PermaStorageDevice changelog.
-const int FS_MAX_FILES      = 64;
-const int FS_ENTRY_WORDS    = 64;
-const int FS_DATA_AREA      = 0x1000;   // device-internal start of data
-const int FS_MAX_FILE_BYTES = 0x1000;   // 4 KW quota per slot
+#define FS_MAX_FILES   32   // max files
+#define FS_NAME_MAX    60   // max filename size
 
-const int FS_E_STATUS       = 0;
-const int FS_E_SIZE         = 1;
-const int FS_E_DATA_OFFSET  = 2;
-const int FS_E_RESERVED     = 3;
-const int FS_E_NAME         = 4;
-const int FS_NAME_MAX       = 60;
+#define FS_ENTRY_WORDS    (4 + FS_NAME_MAX)                   // 4 header words + name
+#define FS_DATA_AREA      (FS_MAX_FILES * FS_ENTRY_WORDS * 4) // = device DataStart
+#define FS_MAX_FILE_BYTES 0x100000
 
-const int FS_ST_EMPTY       = 0;
-const int FS_ST_PRESENT     = 1;
-const int FS_ST_DIRTY       = 2;
+#define FS_E_STATUS      0
+#define FS_E_SIZE        1
+#define FS_E_DATA_OFFSET 2
+#define FS_E_RESERVED    3
+#define FS_E_NAME        4
 
-// Returns the OS address of slot 6 — also the device's offset-0.
+#define FS_ST_EMPTY      0
+#define FS_ST_PRESENT    1
+#define FS_ST_DIRTY      2
+
 int *fs_device_base(void) {
-    asm("LDI REA, $MemDevice6.Start");
+    asm("LDI REA, $MemDevice7.Start");
 }
 
 void fs_init(void) {
@@ -140,7 +139,9 @@ int fs_delete(int *name, int name_len) {
 
 int *fs_data_ptr(int *entry) {
     int *base = fs_device_base();
-    return &base[entry[FS_E_DATA_OFFSET]];
+    // DataOffset is a device BYTE offset; convert to a word index (>>2) so the
+    // byte-addressed int* lands on the file's data area.
+    return &base[entry[FS_E_DATA_OFFSET] >> 2];
 }
 
 void fs_mark_dirty(int *entry) {

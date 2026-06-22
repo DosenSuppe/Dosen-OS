@@ -50,7 +50,7 @@ void praseIntToString(int num, char *buffer) {
     // Handle negative numbers (assuming signed 2's complement semantics)
     if (num < 0) {
         is_negative = 1;
-        num -= num; 
+        num = -num; 
         
         // Edge case: Minimum negative value -8388608
         // If your compiler/hardware overflows on `-num`, 

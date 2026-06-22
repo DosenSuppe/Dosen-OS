@@ -2,6 +2,7 @@
 #include "../os_bridge.h"
 #include "../fs.h"
 #include "../../utils/stdio.h"
+#include "../../utils/string.h"
 
 const int CHAR_ENTER = 0xA;
 
@@ -13,7 +14,7 @@ void cat(int argc, int **argv) {
     }
 
     const char *name = argv[1];
-    const int nameLen = strLength(name);
+    const int nameLen = stringLen(name);
 
     int *e = fs_find(name, nameLen);
     if (e == 0) {

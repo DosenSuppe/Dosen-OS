@@ -1,6 +1,7 @@
 #include "../shell_util.h"
 #include "../fs.h"
 #include "../../utils/stdio.h"
+#include "../../utils/string.h"
 
 void del(int argc, int **argv) {
     if (argc < 2) {
@@ -14,7 +15,7 @@ void del(int argc, int **argv) {
         return;
     }
 
-    const int nameLen = strLength(name);
+    const int nameLen = stringLen(name);
 
     if (fs_delete(name, nameLen) == 0) {
         prints("File ", 0);

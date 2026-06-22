@@ -1,21 +1,32 @@
 !IMPORT "Drivers/KeyboardDriver.asm" AS KeyboardDriver
 !IMPORT "Drivers/TTYDriver.asm" AS TTYDriver
-!IMPORT "Shell/shell.asm" AS Shell
-!IMPORT "Shell/shell_util.asm" AS ShellUtil
-!IMPORT "Shell/fs.asm" AS Fs
-!IMPORT "Shell/commands/ls.asm" AS LsCmd
-!IMPORT "Shell/commands/touch.asm" AS TouchCmd
-!IMPORT "Shell/commands/del.asm" AS DelCmd
-!IMPORT "Shell/commands/cat.asm" AS CatCmd
-!IMPORT "Shell/commands/write.asm" AS WriteCmd
-!IMPORT "Shell/commands/dofile.asm" AS DofileCmd
-!IMPORT "Shell/commands/blocks.asm" AS BlocksCmd
-!IMPORT "Shell/commands/run.asm" AS RunCmd
+!IMPORT "Drivers/gen-ScreenDriver.asm" AS ScreenDriver
+
+!IMPORT "Shell/gen-shell.asm" AS Shell
+!IMPORT "Shell/gen-shell_util.asm" AS ShellUtil
+!IMPORT "Shell/gen-fs.asm" AS Fs
+!IMPORT "Shell/commands/gen-ls.asm" AS LsCmd
+!IMPORT "Shell/commands/gen-touch.asm" AS TouchCmd
+!IMPORT "Shell/commands/gen-del.asm" AS DelCmd
+!IMPORT "Shell/commands/gen-cat.asm" AS CatCmd
+!IMPORT "Shell/commands/gen-write.asm" AS WriteCmd
+!IMPORT "Shell/commands/gen-dofile.asm" AS DofileCmd
+!IMPORT "Shell/commands/gen-blocks.asm" AS BlocksCmd
+!IMPORT "Shell/commands/gen-run.asm" AS RunCmd
 !IMPORT "Shell/os_bridge.asm" AS OsBridge
-!IMPORT "Drivers/ScreenDriver.asm" AS ScreenDriver
-!IMPORT "Drivers/NewScreenDriver.asm" AS NewScreenDriver
-!IMPORT "Utils/stdio.asm"
-!IMPORT "Utils/malloc.asm"
+
+!IMPORT "Programs/gen-DIBmapReader.asm" AS DIBmapReader
+!IMPORT "Programs/gen-FontWriter.asm" AS FontWriter
+!IMPORT "Programs/gen-TextEditor.asm" AS TextEditor
+!IMPORT "Programs/gen-Pong.asm" AS Pong
+!IMPORT "Programs/gen-Assembler.asm" AS Assembler
+!IMPORT "Programs/gen-Bitmap.asm" AS Bitmap
+
+!IMPORT "Utils/gen-string.asm"
+!IMPORT "Utils/gen-math.asm"
+!IMPORT "Utils/gen-stdio.asm"
+!IMPORT "Utils/gen-malloc.asm"
+
 !IMPORT "syscall_table.asm"
 
 !DECLARE KeyboardDevice = 0x01
@@ -41,13 +52,15 @@ STR [REB], REA
 CALL loaderInit
 CALL registerBuiltins
 
-; default foreground process (shell)
-LDI REA, #0             ; shell has no main routine
-LDI REB, Shell.onKey
+; default foreground process (shell). shellMain polls the keyboard in normal
+; context (like the editor); the ISR handler is a no-op. Keeping ALL keyboard
+; work and command execution out of the interrupt handler stops long commands
+; (e.g. the assembler) from wedging keyboard input.
+LDI REA, Shell.shellMain
+LDI REB, Shell.shellNoop
 CALL PushProc
 
 CALL Shell.shellInitialize
-CALL ScreenDriver.DrawCenterRedLine
 
 KernelDispatch:
     LDI REA, [$ProcStackTop.Start]
@@ -72,7 +85,7 @@ PushProc:
     PUSH REY
     PUSH REZ
 
-    LDI RET, #1
+    LDI RET, #4         ; slot stride: words are 4 bytes apart (byte-addressed)
     LDI REX, $ProcStack.Start
     LDI REY, $ProcStackTop.Start
     LDI REZ, [REY] ; get value of current proc-stack pointer
@@ -101,7 +114,7 @@ PopProc:
     PUSH REY
     PUSH REZ
 
-    LDI RET, #2
+    LDI RET, #8     ; two slots × 4 bytes (byte-addressed)
     LDI REY, $ProcStackTop.Start
     LDI REZ, [REY]  ; get value of current proc-stack pointer
     SUB REZ, RET    ; remove top two entries
@@ -132,8 +145,8 @@ HandleKeyboardInterrupt:
     LDI REA, [$ProcStackTop.Start]
     LDI REB, $ProcStack.Start
 
-    ADD REA, REB     ; absolute addr of on-key slot + 1
-    SUB REA, #1      ; back off to the on-key slot
+    ADD REA, REB     ; absolute addr of the main slot
+    SUB REA, #4      ; back off one word to the on-key slot
     
     POP REZ
     POP REB
@@ -198,13 +211,13 @@ BuiltinWrapperTemplate:
     GET_SP REX
 
     MOV REY, REX
-    ADD REY, #4
-    LDI REB, [REY]                 ; argv at [FP+4]
+    ADD REY, #16
+    LDI REB, [REY]                 ; argv at [FP+4 words = +16 bytes]
     PUSH REB
 
     MOV REY, REX
-    ADD REY, #3
-    LDI REB, [REY]                 ; argc at [FP+3]
+    ADD REY, #12
+    LDI REB, [REY]                 ; argc at [FP+3 words = +12 bytes]
     PUSH REB
 
     ; Manually-emitted `LDI REA, #imm` so WrapperPatchSlot points at the
@@ -219,41 +232,6 @@ WrapperPatchSlot:
     POP REX
     RTS
 BuiltinWrapperEnd:
-
-; --- Static program blobs --------------------------------------------------
-; Programs that don't fit the trampoline shape (e.g. they use syscalls
-; directly rather than calling a kernel function) live here verbatim.
-
-; hello: writes "Hi!\n" via SYS_ttyWriteChar. Demonstrates the loader path
-; with a real syscall-using program (not a trampoline).
-HelloProgramStart:
-    DW #0x444FF1, #1, #0           ; magic, version, entry_off
-    LDI REA, #0x48                  ; 'H'
-    PUSH REA
-    LDI REA, [SYS_ttyWriteChar]
-    CALL REA
-    POP REC
-
-    LDI REA, #0x69                  ; 'i'
-    PUSH REA
-    LDI REA, [SYS_ttyWriteChar]
-    CALL REA
-    POP REC
-
-    LDI REA, #0x21                  ; '!'
-    PUSH REA
-    LDI REA, [SYS_ttyWriteChar]
-    CALL REA
-    POP REC
-
-    LDI REA, #0xA                   ; '\n'
-    PUSH REA
-    LDI REA, [SYS_ttyWriteChar]
-    CALL REA
-    POP REC
-
-    RTS
-HelloProgramEnd:
 
 ; --- Arena base ------------------------------------------------------------
 ; `loaderInit` sets the bump pointer to this address. From here onward the
