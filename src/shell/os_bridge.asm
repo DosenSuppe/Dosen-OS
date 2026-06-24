@@ -20,8 +20,7 @@ ttyWriteChar:
     PUSH REX
     GET_SP REX
     MOV REY, REX
-    LDI REZ, #12
-    ADD REY, REZ
+    ADD REY, #12
     LDI REA, [REY]
     CALL TTYDriver.WriteCharacter
     POP REX
@@ -58,20 +57,17 @@ MMIOCopy:
 
     ; REA = dst   (arg 0, [FP+12])
     MOV REY, REX
-    LDI REZ, #12
-    ADD REY, REZ
+    ADD REY, #12
     LDI REA, [REY]
 
     ; REB = src   (arg 1, [FP+16])
     MOV REY, REX
-    LDI REZ, #16
-    ADD REY, REZ
+    ADD REY, #16
     LDI REB, [REY]
 
     ; REC = count (arg 2, [FP+20])
     MOV REY, REX
-    LDI REZ, #20
-    ADD REY, REZ
+    ADD REY, #20
     LDI REC, [REY]
 
 MMIOCopy_loop:
@@ -82,12 +78,10 @@ MMIOCopy_loop:
     LDI REY, [REB]     ; REY = *src
     STR REA, REY       ; *dst = REY
 
-    LDI REZ, #4
-    ADD REA, REZ       ; dst += 4 (next word)
-    ADD REB, REZ       ; src += 4
+    ADD REA, #4       ; dst += 4 (next word)
+    ADD REB, #4       ; src += 4
 
-    LDI REZ, #1
-    SUB REC, REZ       ; count--
+    SUB REC, #1       ; count--
 
     JP MMIOCopy_loop
 

@@ -28,27 +28,19 @@ Handle:
         RTS
 
 ReadAndDraw:
-    PUSH REX
     PUSH REZ
     PUSH REA
 
-    LDI REX, $MemDevice0.Start  ; load address of device 1
-    LDI REB, [REX]              ; read value from device 1
+    LDI REB, [$MemDevice0.Start]    ; read value from device 1
     MOV REA, REB 
 
     CALL TTYDriver.WriteCharacter
     
     POP REA
     POP REZ
-    POP REX
     RTS 
 
 @REB returns the value that was read from the keyboard buffer
 Read:
-    PUSH REX
-
-    LDI REX, $MemDevice0.Start  ; load address of device 1
-    LDI REB, [REX]              ; read value from device 1
-
-    POP REX
+    LDI REB, [$MemDevice0.Start]    ; read value from device 1
     RTS

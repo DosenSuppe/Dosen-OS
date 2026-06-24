@@ -2,6 +2,7 @@
 #include "../shell/os_bridge.h"
 #include "../utils/stdio.h"
 #include "../utils/string.h"
+#include "../shell/shell.h"
 
 #define KEY_BACKSPACE 0x8
 #define KEY_ENTER     0xA
@@ -10,16 +11,14 @@
 #define CURSOR_CHAR   0x5F   // '_' drawn at the (end-of-buffer) cursor
 
 // Working buffer: a flat copy of the file, one char per word, '\n' (0xA) as the
-// line separator. The cursor is always editLength. We have no arrow keys to
-// move it.
+// line separator. The cursor is always editLength. As of now, there is no arrow
+// keys support to move it.
 #define EDIT_MAX 1024
+
 int editBuffer[EDIT_MAX];
 int editLength;
 int editName[64];            // null-terminated copy of the filename
 int editDirty;               // 1 => the screen needs a redraw on the next tick
-
-// Reprints the shell prompt after we hand control back. Defined in shell.c.
-extern void shellInitialize(void);
 
 // Copy argv[1] into editName so we still know the target once the shell's argv
 // goes away.
