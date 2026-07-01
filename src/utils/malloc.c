@@ -14,7 +14,7 @@ int *_getInitialHeap() {
 void _heapInit() {
     if (heapInit) return;
 
-    heapStart = 
+    heapStart = _getInitialHeap();
     heapEnd = heapStart;
 
     heapInit = 1;
