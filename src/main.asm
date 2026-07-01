@@ -1,6 +1,7 @@
 !IMPORT "Drivers/KeyboardDriver.asm" AS KeyboardDriver
 !IMPORT "Drivers/TTYDriver.asm" AS TTYDriver
 !IMPORT "Drivers/gen-ScreenDriver.asm" AS ScreenDriver
+!IMPORT "Drivers/gen-net.asm" AS Net
 
 !IMPORT "Shell/gen-shell.asm" AS Shell
 !IMPORT "Shell/gen-shell_util.asm" AS ShellUtil

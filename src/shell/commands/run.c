@@ -11,6 +11,8 @@
 #include "../../programs/Assembler.h"
 #include "../../programs/Bitmap.h"
 
+#include "../../drivers/net.h"
+
 #include "../../utils/malloc.h"
 
 #define PROGRAM_MAGIC 0x444FF1
@@ -124,6 +126,10 @@ void registerBuiltins(void) {
     register_builtin("pong", pong);
     register_builtin("asm", assemblerRun);
     register_builtin("bmp", bitmap);
+    
+    register_builtin("nettest", nettest);
+    register_builtin("arptest", arptest);
+    register_builtin("ping", ping);
 }
 
 // ---------------------------------------------------------------------------
