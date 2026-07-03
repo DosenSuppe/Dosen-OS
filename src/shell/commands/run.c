@@ -11,7 +11,7 @@
 #include "../../programs/Assembler.h"
 #include "../../programs/Bitmap.h"
 
-#include "../../drivers/net.h"
+#include "./net/netprog.h"
 
 #include "../../utils/malloc.h"
 
@@ -127,9 +127,9 @@ void registerBuiltins(void) {
     register_builtin("asm", assemblerRun);
     register_builtin("bmp", bitmap);
     
-    register_builtin("nettest", nettest);
-    register_builtin("arptest", arptest);
+    register_builtin("arp", arp);
     register_builtin("ping", ping);
+    register_builtin("dns", dns);
 }
 
 // ---------------------------------------------------------------------------

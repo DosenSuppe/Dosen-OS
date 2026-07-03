@@ -14,6 +14,9 @@
 !IMPORT "Shell/commands/gen-dofile.asm" AS DofileCmd
 !IMPORT "Shell/commands/gen-blocks.asm" AS BlocksCmd
 !IMPORT "Shell/commands/gen-run.asm" AS RunCmd
+!IMPORT "Shell/commands/net/gen-arp.asm" AS ARP
+!IMPORT "Shell/commands/net/gen-dns.asm" AS DNS
+!IMPORT "Shell/commands/net/gen-ping.asm" AS PING
 !IMPORT "Shell/os_bridge.asm" AS OsBridge
 
 !IMPORT "Programs/gen-DIBmapReader.asm" AS DIBmapReader
