@@ -1,5 +1,11 @@
 #include "../../../drivers/net.h"
 #include "../../../utils/stdio.h"
+#include "../../../utils/string.h"
+#include "../../../shell/fs.h"
+
+const char DNS_CACHE_FILENAME[14] = "dns-cache.txt";
+const int DNS_CACHE_FILENNAME_LEN = 14;
+const int DNS_CACHE_MAX_BYTES = 0x1000;
 
 void dns(int argc, int **argv) {
     int frame[128];
@@ -124,18 +130,62 @@ void dns(int argc, int **argv) {
     return;
 }
 
-/**
- * Checks if there is a DNS-Entry to this hostname in the DNS cache file.
- * 
- * TODO: Add TTL for DNS entries in the cache file
- * 
- * @param hostname Pointer for the hostname string.
- * 
- * @returns validity (1 = valid, 0 = invalid)
- */
-int hasValidDnsEntry(int *hostname) {
-
+int dnsCharLower(int c) {
+    if (c >= 'A' && c <= 'Z')
+        return c + 32;
+    return c;
 }
+
+int dnsLineMatches(int *data, int pos, int size, int *hostname) {
+    int i = 0;
+
+    while (hostname[i] != 0) {
+        if (pos + 1 >= size) return 0;
+        if (dnsCharLower(data[pos + i]) != dnsCharLower(hostname[i])) return 0;
+        i++;
+    }
+
+    if (pos + i >= size) return 0;
+    if (data[pos + i] != ':') return 0;
+
+    return 1;
+}
+
+int dnsParseIp(int *data, int pos, int size) {
+    int ip = 0;
+    int octet = 0;
+
+    while (pos < size) {
+        int c = data[pos];
+
+        if (c >= '0' && c <= '9') {
+            octet = octet * 10 + (c - '0');
+        } else if (c == '.') {
+            ip = (ip << 8) | octet;
+            octet = 0;
+        } else break;
+
+        pos++;
+    }
+
+    return (ip << 8) | octet;
+}
+
+int dnsAppendOctet(int *data, int pos, int value) {
+    if (value >= 100) {
+        data[pos] = '0' + (value / 100);
+        pos++;
+    }
+
+    if (value >= 10) {
+        data[pos] = '0' + (value / 10) % 10;
+        pos++;
+    }
+
+    data[pos] = '0' + value % 10;
+    return pos + 1;
+}
+
 
 /**
  * @param hostname Pointer for the hostname string
@@ -147,7 +197,51 @@ int hasValidDnsEntry(int *hostname) {
  * @returns void
  */
 void saveDnsResult(int *hostname, int octett1, int octett2, int octett3, int octett4) {
-    
+    int *cacheFile = fs_find(DNS_CACHE_FILENAME, DNS_CACHE_FILENNAME_LEN);
+
+    if (cacheFile == 0) {
+        cacheFile = fs_create(DNS_CACHE_FILENAME, DNS_CACHE_FILENNAME_LEN);
+
+        if (cacheFile == 0) {
+            prints("DNS-ERROR: Unable to create DNS Cache file!", 1);
+            return;
+        }
+    }
+
+    int *data = fs_data_ptr(cacheFile);
+    int pos = cacheFile[1];
+
+    // worst case append: hostname + ':' + ip + '\n'
+    int needed = stringLen(hostname) + 17;
+
+    if (pos + needed > DNS_CACHE_MAX_BYTES) {
+        prints("DNS-ERROR: Cache file is full!", 1);
+        return;
+    }
+
+    int i = 0;
+    while (hostname[i] != 0) {
+        data[pos] = dnsCharLower(hostname[i]);
+        pos++;
+        i++;
+    }
+
+    data[pos] = ':';
+    pos++;
+
+    pos = dnsAppendOctet(data, pos, octett1);
+    data[pos] = '.'; pos++;
+    pos = dnsAppendOctet(data, pos, octett2);
+    data[pos] = '.'; pos++;
+    pos = dnsAppendOctet(data, pos, octett3);
+    data[pos] = '.'; pos++;
+    pos = dnsAppendOctet(data, pos, octett4);
+
+    data[pos] = '\n';
+    pos++;
+
+    cacheFile[1] = pos;
+    fs_mark_dirty(cacheFile);
 }
 
 /**
@@ -158,7 +252,35 @@ void saveDnsResult(int *hostname, int octett1, int octett2, int octett3, int oct
  * @returns ip-address of the host (or 0.0.0.0 if entry is invalid or hostname not found)
  */
 int retrieveDnsEntry(int *hostname) {
-    return 0;
+    int *cacheFile = fs_find(DNS_CACHE_FILENAME, DNS_CACHE_FILENNAME_LEN);
+
+    if (cacheFile == 0) {
+        cacheFile = fs_create(DNS_CACHE_FILENAME, DNS_CACHE_FILENNAME_LEN);
+        if (cacheFile == 0) {
+            prints("DNS-ERROR: Unable to create DNS Cache file!", 1);
+        }
+        return 0;   // fresh file has no entries
+    }
+
+    int *data = fs_data_ptr(cacheFile);   // data[0] is the file's first char
+    int size = cacheFile[1];              // length in chars
+
+    int pos = 0;
+    while (pos < size) {
+        // pos is at the start of a line
+        if (data[pos] != '#' && data[pos] != '\n' && data[pos] != '\r') {
+            if (dnsLineMatches(data, pos, size, hostname)) {
+                while (pos < size && data[pos] != ':') { pos++; }
+                return dnsParseIp(data, pos + 1, size);
+            }
+        }
+
+        // advance to the start of the next line
+        while (pos < size && data[pos] != '\n') { pos++; }
+        pos++;   // step over the '\n'
+    }
+
+    return 0;   // not found
 }
 
 int dnsEncodeName(int *frame, int offset, int *name) {
