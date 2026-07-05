@@ -140,7 +140,7 @@ int dnsLineMatches(int *data, int pos, int size, int *hostname) {
     int i = 0;
 
     while (hostname[i] != 0) {
-        if (pos + 1 >= size) return 0;
+        if (pos + i >= size) return 0;
         if (dnsCharLower(data[pos + i]) != dnsCharLower(hostname[i])) return 0;
         i++;
     }

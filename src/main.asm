@@ -2,6 +2,7 @@
 !IMPORT "Drivers/TTYDriver.asm" AS TTYDriver
 !IMPORT "Drivers/gen-ScreenDriver.asm" AS ScreenDriver
 !IMPORT "Drivers/gen-net.asm" AS Net
+!IMPORT "Drivers/gen-timer.asm" AS Timer
 
 !IMPORT "Shell/gen-shell.asm" AS Shell
 !IMPORT "Shell/gen-shell_util.asm" AS ShellUtil
@@ -17,6 +18,7 @@
 !IMPORT "Shell/commands/net/gen-arp.asm" AS ARP
 !IMPORT "Shell/commands/net/gen-dns.asm" AS DNS
 !IMPORT "Shell/commands/net/gen-ping.asm" AS PING
+!IMPORT "Shell/commands/gen-time.asm" as Time
 !IMPORT "Shell/os_bridge.asm" AS OsBridge
 
 !IMPORT "Programs/gen-DIBmapReader.asm" AS DIBmapReader

@@ -23,7 +23,7 @@ void prints(int *str, int newLine) {
 }
 
 void printi(int val, int newLine) {
-    char result[10];
+    char result[16];
 
     praseIntToString(val, result);
     prints(result, 0);
@@ -35,7 +35,7 @@ void printi(int val, int newLine) {
 
 
 void praseIntToString(int num, char *buffer) {
-    char temp[10];
+    char temp[16];
     int i = 0;
     int j = 0;
     int is_negative = 0;

@@ -26,6 +26,7 @@ extern void touch(int argc, int **argv);
 extern void write(int argc, int **argv);
 extern void dofile(int argc, int **argv);
 extern void blocks(int argc, int **argv);
+extern void time(int argc, int **argv);
 
 // ---------------------------------------------------------------------------
 // Symbol fetchers — resolved by the linker from labels in main.asm.
@@ -130,6 +131,7 @@ void registerBuiltins(void) {
     register_builtin("arp", arp);
     register_builtin("ping", ping);
     register_builtin("dns", dns);
+    register_builtin("time", time);
 }
 
 // ---------------------------------------------------------------------------
