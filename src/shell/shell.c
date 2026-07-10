@@ -92,8 +92,9 @@ void shellExecute(void) {
 // so an idle tick is just one read and a return.
 void shellMain(void) {
     char character = ttyReadChar();
+
     if (character == 0) {
-        return;                 // nothing pending
+        return;
     }
 
     renderChar(character, 10, 10);
@@ -132,3 +133,16 @@ void shellMain(void) {
 
     printc(character);
 }
+
+void shellProcess(void) {
+    shellInitialize();
+
+    while (1) {
+        shellMain();
+    }
+    
+    return;
+}
+
+
+

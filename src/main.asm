@@ -35,6 +35,10 @@
 
 !IMPORT "syscall_table.asm"
 
+; Kernel stuff
+!IMPORT "kernel/switch.asm" AS Switch
+!IMPORT "kernel/gen-scheduler.asm" AS Scheduler
+
 !DECLARE KeyboardDevice = 0x01
 
 .Kernel
@@ -58,113 +62,67 @@ STR [REB], REA
 CALL loaderInit
 CALL registerBuiltins
 
-; default foreground process (shell). shellMain polls the keyboard in normal
-; context (like the editor); the ISR handler is a no-op. Keeping ALL keyboard
-; work and command execution out of the interrupt handler stops long commands
-; (e.g. the assembler) from wedging keyboard input.
-LDI REA, Shell.shellMain
-LDI REB, Shell.shellNoop
-CALL PushProc
+CALL Scheduler.scheduleInit
+CALL Scheduler.systemBoot
 
-CALL Shell.shellInitialize
+; pid 0 (the boot context) idles here. Once the timer IRQ is enabled and
+; processes are spawned, the tick preempts this loop and the scheduler brings
+; it back. Until the bench wiring (spawn + timer-enable) is added this just
+; spins, but it stops the CPU running off the end of .Kernel.
+idleLoop:
+    JP idleLoop
 
-KernelDispatch:
-    LDI REA, [$ProcStackTop.Start]
-    LDI REB, $ProcStack.Start
-    
-    ADD REA, REB ; absolute addr of mainLoop slot
-
-    ; if mainLoop is null, the process is event-driven — just spin and let the ISR drive it
-    LDI REC, [REA]
-    LDI REB, #0
-    CMP REC, REB
-    JP_EQ KernelDispatch
-
-    CALL REC         ; REC already holds the function pointer from LDI above
-    JP KernelDispatch
-
-@REA main routine
-@REB on-key ISR
+; --- Deprecated LIFO-model stubs ---------------------------------------------
+; The scheduler replaces PushProc/PopProc, but os_bridge.asm's pushProc/popProc
+; wrappers (used by the editor/pong foreground programs) still reference these
+; labels. Kept as no-ops so the image links; they're never reached in the bench
+; (no shell launches those programs). Retire fully in phase 6.
 PushProc:
-    PUSH RET
-    PUSH REX
-    PUSH REY
-    PUSH REZ
-
-    LDI RET, #4         ; slot stride: words are 4 bytes apart (byte-addressed)
-    LDI REX, $ProcStack.Start
-    LDI REY, $ProcStackTop.Start
-    LDI REZ, [REY] ; get value of current proc-stack pointer
-
-    ADD REZ, REX ; apply pointer onto the stack to get current address
-
-    ; saving on-key routine to stack
-    ADD REZ, RET
-    STR [REZ], REB
-
-    ; saving main routine to stack
-    ADD REZ, RET
-    STR [REZ], REA
-
-    SUB REZ, REX    ; remove the offset to get pure SP value again
-    STR [REY], REZ  ; save new SP value
-
-    POP REZ
-    POP REY
-    POP REX
-    POP RET
     RTS
-
 PopProc:
-    PUSH RET
-    PUSH REY
-    PUSH REZ
-
-    LDI RET, #8     ; two slots × 4 bytes (byte-addressed)
-    LDI REY, $ProcStackTop.Start
-    LDI REZ, [REY]  ; get value of current proc-stack pointer
-    SUB REZ, RET    ; remove top two entries
-    STR [REY], REZ  ; save new SP value
-
-    POP REZ
-    POP REY
-    POP RET
     RTS
 
 .InterruptVector
-PUSH REA
+PUSH REA 
 PUSH REB
-PUSH REC
+PUSH REC 
+PUSH REN 
+PUSH REO 
+PUSH REP 
+PUSH REQ 
+PUSH RER 
+PUSH RES 
+PUSH RET 
+PUSH REU 
+PUSH REV 
+PUSH REW 
+PUSH REX 
+PUSH REY 
+PUSH REZ
 
-GET_INT_ID REA
+GET_SP REA
+PUSH REA
+CALL Scheduler.scheduleSwitch
+SET_SP_R REA
 
-; Check if the interrupt is from the keyboard
-LDI REB, KeyboardDevice
-CMP REA, REB
-JP_EQ HandleKeyboardInterrupt
-JP InterruptDone
-
-HandleKeyboardInterrupt:
-    PUSH REB
-    PUSH REZ
-
-    LDI REA, [$ProcStackTop.Start]
-    LDI REB, $ProcStack.Start
-
-    ADD REA, REB     ; absolute addr of the main slot
-    SUB REA, #4      ; back off one word to the on-key slot
-    
-    POP REZ
-    POP REB
-
-    CALL [REA]         ; call the on-key routine
-    JP InterruptDone
-
-InterruptDone:
-    POP REC
-    POP REB
-    POP REA
-    RTI
+isrRestore:
+POP REZ 
+POP REY
+POP REX 
+POP REW 
+POP REV 
+POP REU 
+POP RET 
+POP RES 
+POP RER 
+POP REQ 
+POP REP 
+POP REO
+POP REN 
+POP REC
+POP REB 
+POP REA  
+RTI
 
 ; ---------------------------------------------------------------------------
 ; User-program ABI (v1)
